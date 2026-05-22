@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>North Recruitment & Financial Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); min-height:100vh; }
+
+        /* Enhanced animations */
+        @keyframes slideInLeft { from { transform: translateX(-30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar { position:fixed; left:0; top:0; width:280px; height:100vh; background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%); box-shadow:8px 0 32px rgba(0,0,0,0.4); z-index:1000; overflow-y:auto; transition:transform 0.3s ease; display:flex; flex-direction:column; animation: slideInLeft 0.5s ease-out; }
+        .sidebar-header { padding:2rem 1.5rem; border-bottom:1px solid rgba(255,255,255,0.1); background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2)); flex-shrink:0; }
+        .sidebar-nav { padding:1rem 0; flex:1; }
+        .nav-item { padding:1rem 1.5rem; cursor:pointer; transition:all 0.3s; border-left:4px solid transparent; display:flex; align-items:center; gap:1rem; color:#94a3b8; font-weight:500; font-size:0.9rem; }
+        .nav-item:hover { background:rgba(99,102,241,0.15); color:#fff; border-left-color:#818cf8; transform: translateX(5px); }
+        .nav-item.active { background:linear-gradient(90deg, rgba(99,102,241,0.25), rgba(99,102,241,0.05)); color:#fff; border-left-color:#6366f1; box-shadow: inset 0 0 20px rgba(99,102,241,0.2); }
+        .nav-item i { font-size:1.1rem; width:22px; text-align:center; transition: transform 0.3s; }
+        .nav-item:hover i { transform: scale(1.2); }
+        .sidebar-footer { padding:1.5rem; border-top:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content { margin-left:280px; min-height:100vh; background:transparent; }
+        .top-bar { background:rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding:1.25rem 2rem; box-shadow:0 4px 20px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; position:sticky; top:0; z-index:100; animation: slideInUp 0.5s ease-out; }
+        .content-area { padding:1.75rem 2rem; animation: fadeIn 0.8s ease-out; }
+
+        /* ===== FILTERS ===== */
+        .filter-section { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end; background:linear-gradient(135deg,#ffffff,#f8fafc); padding:1rem 1.25rem; border-radius:1rem; border:2px solid rgba(99,102,241,0.2); box-shadow: 0 4px 16px rgba(99,102,241,0.15); }
+        .filter-group { position:relative; flex:1; min-width:130px; max-width:170px; }
+        .filter-label { display:block; font-size:0.68rem; font-weight:700; color:#64748b; margin-bottom:0.3rem; text-transform:uppercase; letter-spacing:0.5px; }
+        .filter-select { width:100%; padding:0.5rem 2rem 0.5rem 0.65rem; border:2px solid #e2e8f0; border-radius:0.625rem; background:white; font-size:0.8rem; font-weight:500; cursor:pointer; transition:all 0.3s; appearance:none; -webkit-appearance:none; }
+        .filter-select:hover { border-color:#6366f1; box-shadow: 0 2px 8px rgba(99,102,241,0.2); }
+        .filter-select:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,0.15); }
+        .filter-group::after { content:'\f107'; font-family:'Font Awesome 6 Free'; font-weight:900; position:absolute; right:0.65rem; bottom:0.6rem; pointer-events:none; color:#64748b; font-size:0.8rem; transition: transform 0.3s; }
+        .filter-group.active .filter-select { border-color:#6366f1; background:linear-gradient(135deg, #f0f4ff, #ffffff); font-weight:600; color:#4338ca; box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
+        .filter-group.active::after { color:#6366f1; transform: rotate(180deg); }
+        .filter-btn { padding:0.6rem 1.3rem; border:none; border-radius:0.625rem; font-weight:600; font-size:0.8rem; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; gap:0.45rem; position:relative; white-space:nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-reset { background:linear-gradient(135deg,#ef4444,#dc2626); color:white; }
+        .btn-reset:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(239,68,68,0.5); }
+        .btn-upload { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; }
+        .btn-upload:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(99,102,241,0.5); }
+        .filter-badge { position:absolute; top:-8px; right:-8px; width:22px; height:22px; background:linear-gradient(135deg,#ef4444,#dc2626); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:0.65rem; font-weight:700; box-shadow:0 2px 8px rgba(239,68,68,0.5); animation: pulse 2s infinite; }
+
+        /* ===== SECTION ===== */
+        .section { display:none; }
+        .section.active { display:block; animation: fadeIn 0.6s ease-out; }
+
+        /* ===== KPI CARDS ===== */
+        .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .kpi-card { background:white; border-radius:0.875rem; padding:1.25rem; box-shadow:0 4px 16px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08); transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left:5px solid; cursor:pointer; overflow:hidden; position:relative; border-top: 1px solid rgba(0,0,0,0.05); }
+        .kpi-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,transparent,rgba(255,255,255,0.1)); opacity:0; transition:opacity 0.4s; }
+        .kpi-card:hover { transform:translateY(-6px) scale(1.03); box-shadow:0 12px 32px rgba(0,0,0,0.15); }
+        .kpi-card:hover::before { opacity:1; }
+        .kpi-card.blue { border-color:#3b82f6; background: linear-gradient(135deg, #ffffff, #eff6ff); }
+        .kpi-card.green { border-color:#10b981; background: linear-gradient(135deg, #ffffff, #ecfdf5); }
+        .kpi-card.orange { border-color:#f59e0b; background: linear-gradient(135deg, #ffffff, #fffbeb); }
+        .kpi-card.indigo { border-color:#6366f1; background: linear-gradient(135deg, #ffffff, #eef2ff); }
+        .kpi-card.purple { border-color:#8b5cf6; background: linear-gradient(135deg, #ffffff, #f5f3ff); }
+        .kpi-card.red { border-color:#ef4444; background: linear-gradient(135deg, #ffffff, #fef2f2); }
+        .kpi-card.yellow { border-color:#eab308; background: linear-gradient(135deg, #ffffff, #fefce8); }
+        .kpi-card.gray { border-color:#6b7280; background: linear-gradient(135deg, #ffffff, #f9fafb); }
+        .kpi-label { color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:0.4rem; }
+        .kpi-value { font-size:1.9rem; font-weight:800; color:#1e293b; line-height:1; margin:0.4rem 0; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .kpi-icon { float:right; font-size:1.5rem; opacity:0.12; margin-top:-4px; transition: all 0.3s; }
+        .kpi-card:hover .kpi-icon { opacity:0.25; transform: scale(1.1); }
+        .kpi-sub { font-size:0.75rem; color:#94a3b8; margin-top:0.5rem; font-weight:500; }
+        .badge { display:inline-block; padding:0.25rem 0.65rem; border-radius:9999px; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-top:0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .badge-blue { background:#dbeafe; color:#1e40af; }
+        .badge-green { background:#d1fae5; color:#065f46; }
+        .badge-warning { background:#fef3c7; color:#92400e; }
+        .badge-info { background:#e0e7ff; color:#3730a3; }
+        .badge-danger { background:#fee2e2; color:#991b1b; }
+        .badge-yellow { background:#fefce8; color:#854d0e; }
+        .badge-gray { background:#f3f4f6; color:#374151; }
+
+        /* ===== METRIC CARDS ===== */
+        .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.75rem; margin-bottom:1.75rem; }
+        .metric-card { background:white; border:3px solid rgba(99,102,241,0.15); border-radius:1.25rem; padding:2rem; transition:all 0.4s; box-shadow: 0 4px 16px rgba(99,102,241,0.1); }
+        .metric-card:hover { border-color:rgba(99,102,241,0.4); box-shadow:0 16px 48px rgba(99,102,241,0.2); transform: translateY(-4px); }
+        .metric-label { color:#64748b; font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:1rem; }
+        .metric-value { font-size:3rem; font-weight:800; background:linear-gradient(135deg,#6366f1,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; text-shadow: 0 4px 8px rgba(99,102,241,0.3); }
+        .metric-sub { color:#94a3b8; font-size:0.875rem; font-weight:500; margin-top:0.75rem; }
+
+        /* ===== CHARTS ===== */
+        .chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:1.25rem; margin-bottom:1.75rem; }
+        .chart-card { background:white; border-radius:0.875rem; padding:1.5rem; box-shadow:0 4px 16px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.08); border:1px solid rgba(99,102,241,0.12); transition:all 0.4s; }
+        .chart-card:hover { box-shadow:0 12px 32px rgba(0,0,0,0.12); border-color:rgba(99,102,241,0.3); transform: translateY(-4px); }
+        .chart-title { font-size:1rem; font-weight:700; color:#1e293b; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.65rem; }
+        .chart-container { position:relative; height:300px; }
+        .chart-container.sm { height:260px; }
+
+        /* ===== FINANCIAL SECTION ===== */
+        .fin-kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .fin-kpi { border-radius:0.875rem; padding:1.25rem; color:white; cursor:pointer; transition:all 0.4s; box-shadow: 0 4px 16px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15); }
+        .fin-kpi:hover { transform:translateY(-6px) scale(1.03); box-shadow: 0 12px 32px rgba(0,0,0,0.25); }
+        .fin-kpi-label { font-size:0.7rem; opacity:0.95; margin-bottom:0.4rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+        .fin-kpi-value { font-size:2.1rem; font-weight:800; text-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .fin-kpi-unit { font-size:0.7rem; opacity:0.85; margin-top:0.4rem; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index:9999; align-items:center; justify-content:center; }
+        .modal-overlay.active { display:flex; }
+        .modal-box { background:white; border-radius:1.25rem; padding:3rem; max-width:560px; width:90%; text-align:center; box-shadow:0 32px 80px rgba(0,0,0,0.4); animation:modalIn 0.3s ease; }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
+        .modal-icon { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+        .modal-title { font-size:1.5rem; font-weight:700; color:#1e293b; margin-bottom:0.75rem; }
+        .modal-body { color:#64748b; font-size:0.95rem; line-height:1.7; max-height:360px; overflow-y:auto; margin-bottom:2rem; }
+        .modal-close-btn { padding:0.875rem 2.5rem; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:0.625rem; font-weight:700; cursor:pointer; font-size:1rem; transition:all 0.3s; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+        .modal-close-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(99,102,241,0.4); }
+
+        /* ===== TOAST ===== */
+        #toastContainer { position:fixed; bottom:2rem; right:2rem; z-index:99999; display:flex; flex-direction:column; gap:0.75rem; align-items:flex-end; }
+        .toast { padding:1rem 1.5rem; border-radius:0.75rem; font-weight:600; font-size:0.9rem; box-shadow:0 8px 32px rgba(0,0,0,0.25); transform:translateX(120%); transition:transform 0.5s cubic-bezier(0.4,0,0.2,1); color:white; min-width:240px; max-width:400px; }
+        .toast.show { transform:translateX(0); }
+
+        /* ===== MISC ===== */
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .spin { animation:spin 1s linear infinite; display:inline-block; }
+        .mobile-fab { display:none; position:fixed; bottom:2rem; left:2rem; width:56px; height:56px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:50%; font-size:1.4rem; cursor:pointer; box-shadow:0 8px 32px rgba(99,102,241,0.5); z-index:999; transition: all 0.3s; }
+        .mobile-fab:hover { transform: scale(1.1); }
+        @media(max-width:1024px){ .sidebar{transform:translateX(-100%);} .sidebar.open{transform:translateX(0);} .main-content{margin-left:0;} .mobile-fab{display:flex;align-items:center;justify-content:center;} .chart-grid{grid-template-columns:1fr;} }
+        .section-header { font-size:1.6rem; font-weight:800; color:white; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.85rem; text-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+        /* Drill-through table */
+        .dt-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+        .dt-table th { background:#f8fafc; padding:0.65rem 0.85rem; text-align:left; font-weight:700; color:#374151; border-bottom:2px solid #e5e7eb; font-size:0.75rem; text-transform:uppercase; }
+        .dt-table td { padding:0.65rem 0.85rem; border-bottom:1px solid #f1f5f9; color:#374151; }
+        .dt-table tr:hover td { background:#f8fafc; }
+
+        /* Upload area */
+        .upload-area { border:3px dashed #cbd5e1; border-radius:1.25rem; padding:3rem; text-align:center; background:#f8fafc; transition:all 0.4s; cursor:pointer; }
+        .upload-area:hover, .upload-area.drag-over { border-color:#6366f1; background:linear-gradient(135deg, #eef2ff, #f8fafc); transform: scale(1.02); }
+    </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div style="color:white;">
+            <i class="fas fa-chart-line" style="font-size:2.25rem;color:#818cf8;"></i>
+            <h2 style="font-size:1.35rem;font-weight:800;margin-top:0.85rem;letter-spacing:-0.3px;line-height:1.3;">North Recruitment</h2>
+            <p style="color:#94a3b8;font-size:0.8rem;margin-top:0.25rem;">Financial Dashboard</p>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-item active" id="nav-recruitment" onclick="switchSection('recruitment')">
+            <i class="fas fa-users"></i>
+            <span>Recruitment Analysis</span>
+        </div>
+        <div class="nav-item" id="nav-financial" onclick="switchSection('financial')">
+            <i class="fas fa-chart-bar"></i>
+            <span>Financial Analysis</span>
+        </div>
+        <div class="nav-item" id="nav-hc" onclick="switchSection('hc')">
+            <i class="fas fa-user-friends"></i>
+            <span>HC Analysis</span>
+        </div>
+        <div class="nav-item" onclick="document.getElementById('fileInput').click()">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>Upload Data</span>
+        </div>
+    </nav>
+    <div class="sidebar-footer">
+        <div style="color:#64748b;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Last Updated</div>
+        <div style="color:#e2e8f0;font-weight:600;font-size:0.9rem;margin-top:0.4rem;" id="lastUpdated">—</div>
+        <div style="color:#475569;font-size:0.8rem;margin-top:0.85rem;" id="recordCount">— records loaded</div>
+    </div>
+</div>
+
+<!-- Mobile FAB -->
+<button class="mobile-fab" onclick="document.getElementById('sidebar').classList.toggle('open')">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+    <!-- TOP BAR -->
+    <div class="top-bar">
+        <h1 style="font-size:1.4rem;font-weight:800;color:#1e293b;white-space:nowrap;">North Recruitment & Financial Dashboard</h1>
+        <div class="filter-section">
+            <!-- Project Filter -->
+            <div class="filter-group" id="grp-project">
+                <label class="filter-label"><i class="fas fa-building" style="margin-right:3px;"></i>Project</label>
+                <select class="filter-select" id="projectFilter" onchange="onFilterChange('project')">
+                    <option value="">All Projects</option>
+                </select>
+            </div>
+            <!-- PM Filter -->
+            <div class="filter-group" id="grp-pm">
+                <label class="filter-label"><i class="fas fa-user-tie" style="margin-right:3px;"></i>Project Manager</label>
+                <select class="filter-select" id="pmFilter" onchange="onFilterChange('pm')">
+                    <option value="">All PMs</option>
+                </select>
+            </div>
+            <!-- Recruiter Filter -->
+            <div class="filter-group" id="grp-recruiter">
+                <label class="filter-label"><i class="fas fa-user-friends" style="margin-right:3px;"></i>Recruiter</label>
+                <select class="filter-select" id="recruiterFilter" onchange="onFilterChange('recruiter')">
+                    <option value="">All Recruiters</option>
+                </select>
+            </div>
+            <!-- Source Filter -->
+            <div class="filter-group" id="grp-source">
+                <label class="filter-label"><i class="fas fa-filter" style="margin-right:3px;"></i>Source</label>
+                <select class="filter-select" id="sourceFilter" onchange="onFilterChange('source')">
+                    <option value="">All Sources</option>
+                </select>
+            </div>
+            <!-- Reset -->
+            <button class="filter-btn btn-reset" id="resetBtn" onclick="resetFilters()">
+                <i class="fas fa-redo-alt"></i> Reset
+            </button>
+            <!-- Upload -->
+            <button class="filter-btn btn-upload" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-cloud-upload-alt"></i> Upload
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTENT AREA -->
+    <div class="content-area">
+
+        <!-- ===== RECRUITMENT SECTION ===== -->
+        <div id="section-recruitment" class="section active">
+            <div class="section-header">
+                <i class="fas fa-users" style="color:#ffffff;"></i>
+                Recruitment Analysis
+            </div>
+
+            <!-- KPI Cards - Reordered with New Tiles -->
+            <div class="kpi-grid">
+                <!-- 1. Total Requirements -->
+                <div class="kpi-card blue" onclick="showDrillthrough('total')">
+                    <i class="fas fa-clipboard-list kpi-icon"></i>
+                    <div class="kpi-label">Total Requirements</div>
+                    <div class="kpi-value" id="kpi-total">0</div>
+                    <span class="badge badge-blue">All Records</span>
+                </div>
+                <!-- 2. Joined -->
+                <div class="kpi-card green" onclick="showDrillthrough('joined')">
+                    <i class="fas fa-user-check kpi-icon"></i>
+                    <div class="kpi-label">Joined</div>
+                    <div class="kpi-value" style="color:#10b981;" id="kpi-joined">0</div>
+                    <span class="badge badge-green">Completed</span>
+                </div>
+                <!-- 3. Offered -->
+                <div class="kpi-card indigo" onclick="showDrillthrough('offered')">
+                    <i class="fas fa-file-contract kpi-icon"></i>
+                    <div class="kpi-label">Offered</div>
+                    <div class="kpi-value" style="color:#6366f1;" id="kpi-offered">0</div>
+                    <span class="badge badge-info">Offers Made</span>
+                </div>
+                <!-- 4. Selection -->
+                <div class="kpi-card purple" onclick="showDrillthrough('selection')">
+                    <i class="fas fa-user-plus kpi-icon"></i>
+                    <div class="kpi-label">Selection</div>
+                    <div class="kpi-value" style="color:#8b5cf6;" id="kpi-selection">0</div>
+                    <span class="badge badge-info">Selected</span>
+                </div>
+                <!-- 5. Work In Progress -->
+                <div class="kpi-card orange" onclick="showDrillthrough('wip')">
+                    <i class="fas fa-spinner kpi-icon"></i>
+                    <div class="kpi-label">Work In Progress</div>
+                    <div class="kpi-value" style="color:#f59e0b;" id="kpi-wip">0</div>
+                    <span class="badge badge-warning">In Process</span>
+                </div>
+                <!-- 6. On Hold -->
+                <div class="kpi-card yellow" onclick="showDrillthrough('hold')">
+                    <i class="fas fa-pause-circle kpi-icon"></i>
+                    <div class="kpi-label">On Hold</div>
+                    <div class="kpi-value" style="color:#eab308;" id="kpi-hold">0</div>
+                    <span class="badge badge-yellow">Paused</span>
+                </div>
+                <!-- 7. Cancelled -->
+                <div class="kpi-card gray" onclick="showDrillthrough('cancelled')">
+                    <i class="fas fa-ban kpi-icon"></i>
+                    <div class="kpi-label">Cancelled</div>
+                    <div class="kpi-value" style="color:#6b7280;" id="kpi-cancelled">0</div>
+                    <span class="badge badge-gray">Closed</span>
+                </div>
+                <!-- 8. Ageing Requirements -->
+                <div class="kpi-card red" onclick="showDrillthrough('ageing')">
+                    <i class="fas fa-clock kpi-icon"></i>
+                    <div class="kpi-label">Ageing Requirements</div>
+                    <div class="kpi-value" style="color:#ef4444;" id="kpi-ageing">0</div>
+                    <div class="kpi-sub">Avg: <b id="kpi-avgAgeing">0</b> days</div>
+                </div>
+                <!-- 9. Ageing % - NEW -->
+                <div class="kpi-card" style="border-color:#f97316; background:linear-gradient(135deg, #ffffff, #fff7ed);" onclick="showDrillthrough('ageingPct')">
+                    <i class="fas fa-percent kpi-icon"></i>
+                    <div class="kpi-label">Ageing %</div>
+                    <div class="kpi-value" style="color:#f97316;" id="kpi-ageingPct">0%</div>
+                    <div class="kpi-sub">of Total Requirements</div>
+                </div>
+                <!-- 10. Success Rate - NEW -->
+                <div class="kpi-card" style="border-color:#14b8a6; background:linear-gradient(135deg, #ffffff, #f0fdfa);" onclick="showDrillthrough('successRate')">
+                    <i class="fas fa-chart-line kpi-icon"></i>
+                    <div class="kpi-label">Success Rate</div>
+                    <div class="kpi-value" style="color:#14b8a6;" id="kpi-successRate">0%</div>
+                    <div class="kpi-sub">Joined / Total</div>
+                </div>
+            </div>
+
+            <!-- Time Metrics -->
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label"><i class="fas fa-stopwatch" style="margin-right:6px;color:#6366f1;"></i>Average Time to Offer</div>
+                    <div class="metric-value" id="kpi-atto">—</div>
+                    <div class="metric-sub">Days from requisition to offer</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label"><i class="fas fa-hourglass-end" style="margin-right:6px;color:#8b5cf6;"></i>Average Time to Fill</div>
+                    <div class="metric-value" id="kpi-attf">—</div>
+                    <div class="metric-sub">Days from requisition to joining</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-calendar-check" style="color:#3b82f6;"></i>Month on Month Joiners</h3>
+                    <div class="chart-container"><canvas id="chartJoiners"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-handshake" style="color:#10b981;"></i>Month on Month Offers</h3>
+                    <div class="chart-container"><canvas id="chartOffers"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-plus-circle" style="color:#f59e0b;"></i>Month on Month Requirements</h3>
+                    <div class="chart-container"><canvas id="chartReqs"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-chart-pie" style="color:#8b5cf6;"></i>Source of Hire Mix</h3>
+                    <div class="chart-container sm"><canvas id="chartSource"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-hourglass-half" style="color:#ef4444;"></i>Ageing Bracket Analysis</h3>
+                    <div class="chart-container sm"><canvas id="chartAgeing"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-venus-mars" style="color:#ec4899;"></i>Gender Diversity (Joined)</h3>
+                    <div class="chart-container sm"><canvas id="chartGender"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FINANCIAL SECTION (HEADCOUNT CHART REMOVED) ===== -->
+        <div id="section-financial" class="section">
+            <div class="section-header">
+                <i class="fas fa-chart-bar" style="color:#ffffff;"></i>
+                Financial Analysis
+            </div>
+            
+            <!-- YTD KPIs -->
+            <div style="margin-bottom:1rem;"><h3 style="color:white;font-size:1.1rem;font-weight:700;margin-bottom:1rem;"><i class="fas fa-calendar-alt" style="margin-right:8px;color:#60a5fa;"></i>Year-to-Date Performance</h3></div>
+            <div class="fin-kpi-grid">
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 6px 24px rgba(59,130,246,0.4);">
+                    <div class="fin-kpi-label">Total Target (YTD)</div>
+                    <div class="fin-kpi-value" id="fin-target">0</div>
+                    <div class="fin-kpi-unit">Lakhs (YTD)</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 6px 24px rgba(16,185,129,0.4);">
+                    <div class="fin-kpi-label">Total Achievement (YTD)</div>
+                    <div class="fin-kpi-value" id="fin-actual">0</div>
+                    <div class="fin-kpi-unit">Lakhs (YTD)</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 6px 24px rgba(139,92,246,0.4);">
+                    <div class="fin-kpi-label">Achievement %</div>
+                    <div class="fin-kpi-value" id="fin-achpct">0%</div>
+                    <div class="fin-kpi-unit">vs Target</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 6px 24px rgba(245,158,11,0.4);">
+                    <div class="fin-kpi-label">Avg CM%</div>
+                    <div class="fin-kpi-value" id="fin-cm">0%</div>
+                    <div class="fin-kpi-unit">Contribution Margin</div>
+                </div>
+            </div>
+            
+            <!-- Quarter on Quarter KPIs -->
+            <div style="margin:2rem 0 1rem 0;"><h3 style="color:white;font-size:1.1rem;font-weight:700;margin-bottom:1rem;"><i class="fas fa-chart-line" style="margin-right:8px;color:#34d399;"></i>Quarter on Quarter Performance</h3></div>
+            <div class="fin-kpi-grid">
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#14b8a6,#0d9488);box-shadow:0 6px 24px rgba(20,184,166,0.4);">
+                    <div class="fin-kpi-label">Q1 (Apr-Jun) Achievement</div>
+                    <div class="fin-kpi-value" id="fin-q1-actual">0</div>
+                    <div class="fin-kpi-unit">Lakhs</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 6px 24px rgba(6,182,212,0.4);">
+                    <div class="fin-kpi-label">Q2 (Jul-Sep) Achievement</div>
+                    <div class="fin-kpi-value" id="fin-q2-actual">0</div>
+                    <div class="fin-kpi-unit">Lakhs</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 6px 24px rgba(139,92,246,0.4);">
+                    <div class="fin-kpi-label">Q3 (Oct-Dec) Achievement</div>
+                    <div class="fin-kpi-value" id="fin-q3-actual">0</div>
+                    <div class="fin-kpi-unit">Lakhs</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#ec4899,#db2777);box-shadow:0 6px 24px rgba(236,72,153,0.4);">
+                    <div class="fin-kpi-label">Q4 (Jan-Mar) Achievement</div>
+                    <div class="fin-kpi-value" id="fin-q4-actual">0</div>
+                    <div class="fin-kpi-unit">Lakhs</div>
+                </div>
+            </div>
+            
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-chart-bar" style="color:#3b82f6;"></i>Target vs Achievement</h3>
+                    <div class="chart-container"><canvas id="chartTarget"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-percentage" style="color:#f59e0b;"></i>CM% Trend</h3>
+                    <div class="chart-container"><canvas id="chartCM"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-trophy" style="color:#10b981;"></i>Achievement % Trend</h3>
+                    <div class="chart-container"><canvas id="chartAch"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-chart-area" style="color:#14b8a6;"></i>Quarter on Quarter Comparison</h3>
+                    <div class="chart-container"><canvas id="chartQuarterly"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-percent" style="color:#f59e0b;"></i>Quarter on Quarter CM%</h3>
+                    <div class="chart-container"><canvas id="chartQuarterlyCM"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== HC ANALYSIS SECTION ===== -->
+        <div id="section-hc" class="section">
+            <div class="section-header">
+                <i class="fas fa-user-friends" style="color:#ffffff;"></i>
+                HC Analysis
+            </div>
+
+            <!-- HC KPI Cards - Reordered with New Tiles -->
+            <div class="kpi-grid">
+                <!-- 1. Total Projects -->
+                <div class="kpi-card purple">
+                    <i class="fas fa-briefcase kpi-icon"></i>
+                    <div class="kpi-label">Total Projects</div>
+                    <div class="kpi-value" style="color:#8b5cf6;" id="hc-projects">0</div>
+                    <span class="badge badge-info">Active Projects</span>
+                </div>
+                <!-- 2. Total Headcount -->
+                <div class="kpi-card blue">
+                    <i class="fas fa-users kpi-icon"></i>
+                    <div class="kpi-label">Total Headcount</div>
+                    <div class="kpi-value" id="hc-total">0</div>
+                    <span class="badge badge-blue">All Resources</span>
+                </div>
+                <!-- 3. Active Resources -->
+                <div class="kpi-card green">
+                    <i class="fas fa-check-circle kpi-icon"></i>
+                    <div class="kpi-label">Active Resources</div>
+                    <div class="kpi-value" style="color:#10b981;" id="hc-active">0</div>
+                    <span class="badge badge-green">Status: Active</span>
+                </div>
+                <!-- 4. Resigned HC - NEW -->
+                <div class="kpi-card red">
+                    <i class="fas fa-user-times kpi-icon"></i>
+                    <div class="kpi-label">Resigned HC</div>
+                    <div class="kpi-value" style="color:#ef4444;" id="hc-resigned">0</div>
+                    <span class="badge badge-danger">Resigned</span>
+                </div>
+                <!-- 5. PM -->
+                <div class="kpi-card indigo">
+                    <i class="fas fa-user-tie kpi-icon"></i>
+                    <div class="kpi-label">PM</div>
+                    <div class="kpi-value" style="color:#6366f1;" id="hc-pm">0</div>
+                    <span class="badge badge-info">Project Managers</span>
+                </div>
+                <!-- 6. Recruiters -->
+                <div class="kpi-card orange">
+                    <i class="fas fa-user-friends kpi-icon"></i>
+                    <div class="kpi-label">Recruiter</div>
+                    <div class="kpi-value" style="color:#f59e0b;" id="hc-recruiters">0</div>
+                    <span class="badge badge-warning">Role Count</span>
+                </div>
+                <!-- 7. Sourcers -->
+                <div class="kpi-card" style="border-color:#14b8a6; background:linear-gradient(135deg, #ffffff, #f0fdfa);">
+                    <i class="fas fa-search kpi-icon"></i>
+                    <div class="kpi-label">Sourcer</div>
+                    <div class="kpi-value" style="color:#14b8a6;" id="hc-sourcers">0</div>
+                    <span class="badge" style="background:#ccfbf1;color:#115e59;">Role Count</span>
+                </div>
+                <!-- 8. OBS -->
+                <div class="kpi-card" style="border-color:#ec4899; background:linear-gradient(135deg, #ffffff, #fdf2f8);">
+                    <i class="fas fa-user-shield kpi-icon"></i>
+                    <div class="kpi-label">OBS</div>
+                    <div class="kpi-value" style="color:#ec4899;" id="hc-obs">0</div>
+                    <span class="badge" style="background:#fce7f3;color:#9f1239;">Role Count</span>
+                </div>
+                <!-- 9. PH - NEW -->
+                <div class="kpi-card" style="border-color:#a855f7; background:linear-gradient(135deg, #ffffff, #faf5ff);">
+                    <i class="fas fa-user-plus kpi-icon"></i>
+                    <div class="kpi-label">PH</div>
+                    <div class="kpi-value" style="color:#a855f7;" id="hc-ph">0</div>
+                    <span class="badge" style="background:#f3e8ff;color:#6b21a8;">Role Count</span>
+                </div>
+                <!-- 10. Data & Analytics - NEW -->
+                <div class="kpi-card" style="border-color:#06b6d4; background:linear-gradient(135deg, #ffffff, #ecfeff);">
+                    <i class="fas fa-chart-line kpi-icon"></i>
+                    <div class="kpi-label">Data & Analytics</div>
+                    <div class="kpi-value" style="color:#06b6d4;" id="hc-data">0</div>
+                    <span class="badge" style="background:#cffafe;color:#155e75;">Role Count</span>
+                </div>
+            </div>
+
+            <!-- HC Charts -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-star" style="color:#f59e0b;"></i>Grade-wise Distribution</h3>
+                    <div class="chart-container"><canvas id="chartGrade"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-user-cog" style="color:#6366f1;"></i>Role-wise Distribution</h3>
+                    <div class="chart-container"><canvas id="chartRole"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-building" style="color:#10b981;"></i>Project-wise Distribution</h3>
+                    <div class="chart-container"><canvas id="chartHCProject"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-tachometer-alt" style="color:#8b5cf6;"></i>Utilization by Grade</h3>
+                    <div class="chart-container"><canvas id="chartUtilGrade"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-layer-group" style="color:#14b8a6;"></i>Utilization by Role</h3>
+                    <div class="chart-container"><canvas id="chartUtilRole"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-users-cog" style="color:#ef4444;"></i>PM-wise Headcount</h3>
+                    <div class="chart-container"><canvas id="chartPM"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Hidden File Input -->
+<input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileUpload(event)">
+
+<!-- Drill-through / Info Modal -->
+<div class="modal-overlay" id="modal">
+    <div class="modal-box">
+        <div class="modal-icon" id="modalIcon" style="background:#e0e7ff;"><i class="fas fa-info modal-icon-i" style="color:#6366f1;font-size:2rem;"></i></div>
+        <div class="modal-title" id="modalTitle">Details</div>
+        <div class="modal-body" id="modalBody"></div>
+        <button class="modal-close-btn" onclick="closeModal()">Close</button>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
+<script>
+// ======================================================
+// EMBEDDED DATA - from Book4.xlsx
+// ======================================================
+const EMBEDDED_DATA = [
+  {"Sr. No.":1,"Project":"MSIL","Requisition Date":"2024-05-07","Job ID":31507,"Job Name":"Finance & Compliance Executive","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"Shikha Swami","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Poonam Saharan","Gender":"Female","Email ID":"poonamsaharan009@gmail.com","Selection Date":"2025-06-05","LOI Date":"2025-06-16","Joining Date":"2025-08-01","Source of Hire":"Taggd","RSLA":null,"TTO":405.0,"TTF":451.0,"Ageing":null,"Ageing Bracket":null},
+  {"Sr. No.":2,"Project":"MSIL","Requisition Date":"2024-05-07","Job ID":31507,"Job Name":"Finance & Compliance Executive","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"IJP","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Rishi Kapoor","Gender":"Female","Email ID":"rishi.kapoor@maruti.co.in","Selection Date":"2024-11-26","LOI Date":"2024-11-26","Joining Date":"2025-05-07","Source of Hire":"IJP","RSLA":null,"TTO":203.0,"TTF":365.0,"Ageing":null,"Ageing Bracket":null},
+  {"Sr. No.":3,"Project":"MSIL","Requisition Date":"2024-05-07","Job ID":31507,"Job Name":"Finance & Compliance Executive","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":null,"PM":"Mukesh Dubey","Stage":"In_Process","Status":"Final Interview","Candidate Name":null,"Gender":null,"Email ID":null,"Selection Date":null,"LOI Date":null,"Joining Date":null,"Source of Hire":null,"RSLA":90.0,"TTO":null,"TTF":null,"Ageing":567.0,"Ageing Bracket":">250 Days"},
+  {"Sr. No.":4,"Project":"MSIL","Requisition Date":"2024-08-06","Job ID":32352,"Job Name":"Project Manager","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"IJP","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Agarwal Rishabh","Gender":"Male","Email ID":"Rishabh.Agarwal@maruti.co.in","Selection Date":"2024-12-16","LOI Date":"2024-12-16","Joining Date":"2025-04-21","Source of Hire":"IJP","RSLA":null,"TTO":132.0,"TTF":258.0,"Ageing":null,"Ageing Bracket":null},
+  {"Sr. No.":5,"Project":"MSIL","Requisition Date":"2025-01-07","Job ID":32667,"Job Name":"Skilling Manager -Technical","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"Shikha Swami","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Harish Yadav","Gender":"Male","Email ID":"0494harishyadav@gmail.com","Selection Date":"2025-02-19","LOI Date":"2025-03-29","Joining Date":"2025-04-08","Source of Hire":"Taggd","RSLA":null,"TTO":81.0,"TTF":91.0,"Ageing":null,"Ageing Bracket":null}
+];
+
+// ======================================================
+// HC DATA - from Team sheet
+// ======================================================
+const HC_DATA = [{"SNO":1,"Status":"Active","EMP_CODE":10003,"EMP_NAME":"Kolli Pushpa","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":2,"Status":"Active","EMP_CODE":10114,"EMP_NAME":"Yogita Porwal","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"OBS","Grade":3,"PM":"Ashish"},{"SNO":3,"Status":"Resigned","EMP_CODE":10209,"EMP_NAME":"Pooja Narayan Kolte","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":4,"Status":"Active","EMP_CODE":10221,"EMP_NAME":"Machindra Gulabrao Kokare","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":5,"Status":"Active","EMP_CODE":10241,"EMP_NAME":"Rashmi Chasta","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":6,"Status":"Active","EMP_CODE":10248,"EMP_NAME":"Supriya Mangesh Joshi","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":7,"Status":"Active","EMP_CODE":10280,"EMP_NAME":"Margaret Moses Hirekerur","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":8,"Status":"Active","EMP_CODE":10386,"EMP_NAME":"DIKSHA KAILAS KHARAT","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":9,"Status":"Active","EMP_CODE":10468,"EMP_NAME":"Kumari Kanak Lata","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":10,"Status":"Active","EMP_CODE":10684,"EMP_NAME":"Vishakha Jain","PROJECT":"Jindal Stainless","Utilization":1,"StatusOk":"Ok","Role":"OBS","Grade":3,"PM":"Kunal Mohan"},{"SNO":11,"Status":"Active","EMP_CODE":10685,"EMP_NAME":"Vinay Kumar","PROJECT":"Jindal Stainless","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":"Kunal Mohan"},{"SNO":12,"Status":"Active","EMP_CODE":10694,"EMP_NAME":"Uma Dinesh Soni","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"OBS","Grade":3,"PM":"Ashish"},{"SNO":13,"Status":"Active","EMP_CODE":10750,"EMP_NAME":"Mohit Yadav","PROJECT":"Sterling Tools","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":6,"PM":null},{"SNO":14,"Status":"Active","EMP_CODE":10788,"EMP_NAME":"Akankhya Mohapatra","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":15,"Status":"Active","EMP_CODE":10823,"EMP_NAME":"Kanika Goyal","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":16,"Status":"Active","EMP_CODE":10842,"EMP_NAME":"Nupur Rajesh Sharnagat","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":2,"PM":null},{"SNO":17,"Status":"Active","EMP_CODE":10864,"EMP_NAME":"PRACHI CHOURASIA","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":18,"Status":"Active","EMP_CODE":10880,"EMP_NAME":"DEEPALI SINGH","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":19,"Status":"Active","EMP_CODE":10929,"EMP_NAME":"VAISHALI SINGH","PROJECT":"Jindal Stainless","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":"Kunal Mohan"},{"SNO":20,"Status":"Active","EMP_CODE":10959,"EMP_NAME":"Kanchan Ravi Bhandari","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":21,"Status":"Active","EMP_CODE":10968,"EMP_NAME":"Megha Taneja","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":22,"Status":"Active","EMP_CODE":10972,"EMP_NAME":"Ravi Ranjan Kumar","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":23,"Status":"Active","EMP_CODE":10995,"EMP_NAME":"Madiha Naaz","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":24,"Status":"Active","EMP_CODE":10999,"EMP_NAME":"KRISHIBHA SHARMA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":25,"Status":"Active","EMP_CODE":11004,"EMP_NAME":"ABHISHEK KAPOOR","PROJECT":"Subros Ltd","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":26,"Status":"Active","EMP_CODE":11012,"EMP_NAME":"URVASHI SHARMA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":27,"Status":"Active","EMP_CODE":11016,"EMP_NAME":"Riya Miglani","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":28,"Status":"Active","EMP_CODE":11032,"EMP_NAME":"VAIBHAV SINGH","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":29,"Status":"Active","EMP_CODE":11036,"EMP_NAME":"KOMAL CHOPRA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":30,"Status":"Active","EMP_CODE":11077,"EMP_NAME":"SOUMYA GOLASH","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":31,"Status":"Active","EMP_CODE":11078,"EMP_NAME":"MEENAKSHI PUPNEJA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":32,"Status":"Active","EMP_CODE":11082,"EMP_NAME":"RAVINA .","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":33,"Status":"Active","EMP_CODE":11084,"EMP_NAME":"Nikita Gupta","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":34,"Status":"Active","EMP_CODE":11090,"EMP_NAME":"Ashish Pandey","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":6,"PM":null},{"SNO":35,"Status":"Active","EMP_CODE":11100,"EMP_NAME":"N Ashok Kumar","PROJECT":"Sterling Tools","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":36,"Status":"Active","EMP_CODE":11107,"EMP_NAME":"Hema Chaudhary","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":37,"Status":"Active","EMP_CODE":11125,"EMP_NAME":"Anupama Harshvardhan","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":38,"Status":"Active","EMP_CODE":11145,"EMP_NAME":"Shubham Bhadauria","PROJECT":"Sterling Tools","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":39,"Status":"Active","EMP_CODE":11147,"EMP_NAME":"MUSKAN TIWARI","PROJECT":"Subros Ltd","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":40,"Status":"Active","EMP_CODE":11149,"EMP_NAME":"DIKSHA GUPTA","PROJECT":"Pernod Ricard","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":"Anjali S"},{"SNO":41,"Status":"Active","EMP_CODE":11161,"EMP_NAME":"REENA CHAUHAN","PROJECT":"Pernod Ricard","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":"Anjali S"},{"SNO":42,"Status":"Active","EMP_CODE":11165,"EMP_NAME":"Lakkarajula Anjali Munaswamy","PROJECT":"Pernod Ricard","Utilization":0.5,"StatusOk":"Ok","Role":"PM","Grade":6,"PM":"Archana T"},{"SNO":43,"Status":"Active","EMP_CODE":11165,"EMP_NAME":"Lakkarajula Anjali Munaswamy","PROJECT":"Unicharm","Utilization":0.5,"StatusOk":"Ok","Role":"PM","Grade":6,"PM":null},{"SNO":44,"Status":"Active","EMP_CODE":11182,"EMP_NAME":"Prashant Rana","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":45,"Status":"Active","EMP_CODE":11187,"EMP_NAME":"Sagar Gupta","PROJECT":"Sterling Tools","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":46,"Status":"Active","EMP_CODE":11201,"EMP_NAME":"Vineet Chauhan","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":47,"Status":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Maruti Suzuki(MSIL)","Utilization":0.2,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":48,"Status":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"SKF India","Utilization":0.1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":49,"Status":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"SBI Cards","Utilization":0.2,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":50,"Status":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Jindal Stainless","Utilization":0.2,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":"Kunal Mohan"},{"SNO":51,"Status":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Pernod Ricard","Utilization":0.1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":"Anjali S"},{"SNO":52,"Status":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Sterling Tools","Utilization":0.1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":53,"Status":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Subros Ltd","Utilization":0.1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":54,"Status":"Active","EMP_CODE":11205,"EMP_NAME":"Deepika Punjabi","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":55,"Status":"Active","EMP_CODE":11231,"EMP_NAME":"KUNAL MOHAN","PROJECT":"Jindal Stainless","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":6,"PM":"Kunal Mohan"},{"SNO":56,"Status":"Active","EMP_CODE":11232,"EMP_NAME":"Raveena Mehta","PROJECT":"Met Glass","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":57,"Status":"Active","EMP_CODE":11237,"EMP_NAME":"Shivani Chaudhary","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":58,"Status":"Active","EMP_CODE":11257,"EMP_NAME":"Ayushi Jha","PROJECT":"Pernod Ricard","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":"Anjali S"},{"SNO":59,"Status":"Active","EMP_CODE":11265,"EMP_NAME":"Sunita Verma","PROJECT":"Pernod Ricard","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":5,"PM":"Anjali S"},{"SNO":60,"Status":"Active","EMP_CODE":11271,"EMP_NAME":"Diksha Gothwal","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":61,"Status":"Active","EMP_CODE":11277,"EMP_NAME":"Anchit Kumar","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":62,"Status":"Active","EMP_CODE":11278,"EMP_NAME":"Payal Sharma","PROJECT":"Unicharm","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":63,"Status":"Active","EMP_CODE":11281,"EMP_NAME":"Poonam Tenginkai","PROJECT":"Unicharm","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":64,"Status":"Active","EMP_CODE":11284,"EMP_NAME":"NAMRATA PANDEY","PROJECT":"Pernod Ricard","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":"Anjali S"},{"SNO":65,"Status":"Active","EMP_CODE":11287,"EMP_NAME":"HIMANSHU NA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":66,"Status":"Active","EMP_CODE":11295,"EMP_NAME":"Kirti Nigam","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":67,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"SBI Cards","Utilization":0.1,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":68,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Jindal Stainless","Utilization":0.25,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":"Kunal Mohan"},{"SNO":69,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Pernod Ricard","Utilization":0.1,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":"Anjali S"},{"SNO":70,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Sterling Tools","Utilization":0.05,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":71,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Subros Ltd","Utilization":0.05,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":72,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Unicharm","Utilization":0.1,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":73,"Status":"Active","EMP_CODE":11315,"EMP_NAME":"Priya Sharma","PROJECT":"Subros Ltd","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":74,"Status":"Active","EMP_CODE":11335,"EMP_NAME":"Muskan Verma","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":75,"Status":"Active","EMP_CODE":11352,"EMP_NAME":"Saheba Siddiqui","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":76,"Status":"Active","EMP_CODE":11384,"EMP_NAME":"SHRADDHA JITENDRA JADHAV","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":77,"Status":"Active","EMP_CODE":11389,"EMP_NAME":"SONAKSHI JHAWAR","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":78,"Status":"Active","EMP_CODE":21842,"EMP_NAME":"Kunal Sehgal","PROJECT":"Subros Ltd","Utilization":0.5,"StatusOk":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":79,"Status":"Active","EMP_CODE":22184,"EMP_NAME":"Mukesh Dubey","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":80,"Status":"Active","EMP_CODE":22639,"EMP_NAME":"Jagrati Raj","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":81,"Status":"Active","EMP_CODE":23404,"EMP_NAME":"Shivani Arun Kumar","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":82,"Status":"Active","EMP_CODE":23577,"EMP_NAME":"Neerja Singh","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":83,"Status":"Active","EMP_CODE":24511,"EMP_NAME":"Sharath Kumar D","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":84,"Status":"Active","EMP_CODE":24563,"EMP_NAME":"Subrat Nayak","PROJECT":"Jindal Stainless","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":5,"PM":"Kunal Mohan"},{"SNO":85,"Status":"Active","EMP_CODE":24855,"EMP_NAME":"Preeti Sharma","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":86,"Status":"Active","EMP_CODE":24887,"EMP_NAME":"Shashi Yadav","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":87,"Status":"Active","EMP_CODE":25004,"EMP_NAME":"Nida Ansari","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":88,"Status":"Active","EMP_CODE":25092,"EMP_NAME":"Shilpa H","PROJECT":"Jindal Stainless","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":"Kunal Mohan"},{"SNO":89,"Status":"Active","EMP_CODE":25118,"EMP_NAME":"Sonam Dalal","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":90,"Status":"Active","EMP_CODE":25253,"EMP_NAME":"Ravinder Kumar Yadav","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":6,"PM":null},{"SNO":91,"Status":"Active","EMP_CODE":25273,"EMP_NAME":"Saraswati Gupta","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":92,"Status":"Active","EMP_CODE":25285,"EMP_NAME":"Gauri Jaitly","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":93,"Status":"Active","EMP_CODE":25294,"EMP_NAME":"Neha Singh","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":94,"Status":"Active","EMP_CODE":25429,"EMP_NAME":"Ajay Pal Singh","PROJECT":"Suzuki R&D","Utilization":0.1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":95,"Status":"Active","EMP_CODE":25444,"EMP_NAME":"Reema Balabantaray","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":96,"Status":"Active","EMP_CODE":25458,"EMP_NAME":"Abhilash Ranjan","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":97,"Status":"Active","EMP_CODE":25483,"EMP_NAME":"Kritika Chauhan","PROJECT":"SBI Cards","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":98,"Status":"Active","EMP_CODE":25504,"EMP_NAME":"Shikha Swami","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":99,"Status":"Active","EMP_CODE":25737,"EMP_NAME":"Natasha Mehta","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"PM","Grade":8,"PM":null},{"SNO":100,"Status":"Active","EMP_CODE":25763,"EMP_NAME":"Neha Chawda","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":101,"Status":"Active","EMP_CODE":25818,"EMP_NAME":"Seereddy Venkata Anuradha","PROJECT":"SKF India","Utilization":1,"StatusOk":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":102,"Status":"Active","EMP_CODE":25939,"EMP_NAME":"Pooja Sandesh Duwawale","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":103,"Status":"Active","EMP_CODE":25963,"EMP_NAME":"Sanjana Betageri","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1,"StatusOk":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":104,"Status":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Maruti Suzuki(MSIL)","Utilization":0.4,"StatusOk":"Ok","Role":"Data & Analytics","Grade":4,"PM":"Archana T"},{"SNO":105,"Status":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Pernod Ricard","Utilization":0.2,"StatusOk":"Ok","Role":"Data & Analytics","Grade":4,"PM":"Anjali S"},{"SNO":106,"Status":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"SBI Cards","Utilization":0.1,"StatusOk":"Ok","Role":"Data & Analytics","Grade":4,"PM":null},{"SNO":107,"Status":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Sterling Tools","Utilization":0.1,"StatusOk":"Ok","Role":"Data & Analytics","Grade":4,"PM":null},{"SNO":108,"Status":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Jindal Stainless","Utilization":0.1,"StatusOk":"Ok","Role":"Data & Analytics","Grade":4,"PM":"Kunal Mohan"},{"SNO":109,"Status":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Unicharm","Utilization":0.1,"StatusOk":"Ok","Role":"Data & Analytics","Grade":4,"PM":null},{"SNO":110,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"SKF India","Utilization":0.2,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":111,"Status":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":0.15,"StatusOk":"Ok","Role":"PH","Grade":9,"PM":"-"},{"SNO":112,"Status":"Active","EMP_CODE":25429,"EMP_NAME":"Ajay Pal Singh","PROJECT":"Jindal Stainless","Utilization":0.9,"StatusOk":"Ok","Role":"Recruiter","Grade":3,"PM":"Kunal Mohan"}];
+
+const FINANCIAL_DATA = {
+  "Project":"MSIL",
+  "months":[
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+    "Jan",
+    "Feb",
+    "Mar"
+  ],
+  "Target":[
+    28.85688,
+    28.4766666666667,
+    22,
+    30,
+    56,
+    40,
+    45,
+    55,
+    45,
+    55,
+    60,
+    60
+  ],
+  "Actual":[
+    32.69722,
+    35.65605,
+    22.66145,
+    50.14425,
+    39.0221,
+    35.87,
+    37.2,
+    39,
+    40.7,
+    29,
+    11,
+    5.12
+  ],
+  "CM":[
+    0.4,
+    0.25,
+    -0.52,
+    -0.57,
+    0.1,
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11
+  ]
+};
+
+// ======================================================
+// GLOBAL STATE
+// ======================================================
+let masterData = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+let currentData = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+let hcMasterData = JSON.parse(JSON.stringify(HC_DATA));
+let hcCurrentData = JSON.parse(JSON.stringify(HC_DATA));
+let charts = {};
+const COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#3b82f6','#ec4899','#14b8a6','#f97316','#06b6d4','#84cc16','#a855f7'];
+
+// ======================================================
+// INIT
+// ======================================================
+document.addEventListener('DOMContentLoaded', () => {
+    Chart.register(ChartDataLabels);
+    populateFilters('init');
+    renderDashboard(currentData);
+    renderFinancialSection();
+    renderHCAnalysis(hcCurrentData);
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    document.getElementById('recordCount').textContent = masterData.length + ' records loaded';
+
+    // Drag & Drop on entire window
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file) processFile(file);
+    });
+});
+
+// ======================================================
+// SECTION SWITCHING
+// ======================================================
+function switchSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('section-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+
+    // Show/hide filters based on section
+    const pmGrp = document.getElementById('grp-pm');
+    const recruiterGrp = document.getElementById('grp-recruiter');
+    const sourceGrp = document.getElementById('grp-source');
+    
+    if (name === 'recruitment') {
+        // Show all filters for recruitment
+        pmGrp.style.display = 'flex';
+        recruiterGrp.style.display = 'flex';
+        sourceGrp.style.display = 'flex';
+    } else if (name === 'financial' || name === 'hc') {
+        // Financial & HC: Show Project and PM filters only
+        pmGrp.style.display = 'flex';
+        recruiterGrp.style.display = 'none';
+        sourceGrp.style.display = 'none';
+    }
+
+    // Render section-specific content
+    if (name === 'hc') {
+        renderHCAnalysis(hcCurrentData);
+    } else if (name === 'financial') {
+        renderFinancialSection();
+    }
+}
+
+// ======================================================
+// CASCADING FILTERS
+// ======================================================
+function rebuildSelect(id, options, keepValue, placeholder) {
+    const sel = document.getElementById(id);
+    const val = (keepValue !== undefined) ? keepValue : sel.value;
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        if (opt === val) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+
+function populateFilters(changedField) {
+    const project   = document.getElementById('projectFilter').value;
+    const pm        = document.getElementById('pmFilter').value;
+    const recruiter = document.getElementById('recruiterFilter').value;
+    const source    = document.getElementById('sourceFilter').value;
+
+    // Determine active section
+    const activeSection = document.querySelector('.section.active');
+    const sectionName = activeSection ? activeSection.id.replace('section-', '') : 'recruitment';
+
+    let allProjects = [];
+    let allPMs = [];
+    
+    if (sectionName === 'financial') {
+        // Financial page: get projects from FINANCIAL_DATA
+        allProjects = ['MSIL'];  // Only MSIL in financial data
+        // Get PMs from recruitment data filtered by project
+        const pmPool = project ? masterData.filter(r => r.Project === project) : masterData;
+        allPMs = [...new Set(pmPool.map(r => r.PM).filter(Boolean))].sort();
+    } else if (sectionName === 'hc') {
+        // HC page: get projects from HC_DATA
+        allProjects = [...new Set(hcMasterData.map(r => r.PROJECT).filter(Boolean))].sort();
+        // Get PMs from HC data filtered by project
+        const pmPool = project ? hcMasterData.filter(r => r.PROJECT === project) : hcMasterData;
+        allPMs = [...new Set(pmPool.map(r => r.PM).filter(Boolean))].sort();
+    } else {
+        // Recruitment page: get projects from recruitment data
+        allProjects = [...new Set(masterData.map(r => r.Project).filter(Boolean))].sort();
+        // PMs available given selected project
+        const pmPool = project ? masterData.filter(r => r.Project === project) : masterData;
+        allPMs = [...new Set(pmPool.map(r => r.PM).filter(Boolean))].sort();
+    }
+
+    // For recruitment page: populate all cascading filters
+    if (sectionName === 'recruitment') {
+        // Recruiters available given selected project + PM
+        const pmPool = project ? masterData.filter(r => r.Project === project) : masterData;
+        const recPool = pmPool.filter(r => pm ? r.PM === pm : true);
+        const allRecruiters = [...new Set(recPool.map(r => r.Recruiter).filter(Boolean))].sort();
+
+        // Sources available given selected project + PM + recruiter
+        const srcPool = recPool.filter(r => recruiter ? r.Recruiter === recruiter : true);
+        const allSources = [...new Set(srcPool.map(r => r['Source of Hire']).filter(Boolean))].sort();
+
+        if (changedField === 'init') {
+            rebuildSelect('projectFilter',   allProjects,  project,   'All Projects');
+            rebuildSelect('pmFilter',        allPMs,       pm,        'All PMs');
+            rebuildSelect('recruiterFilter', allRecruiters, recruiter,'All Recruiters');
+            rebuildSelect('sourceFilter',    allSources,   source,    'All Sources');
+        } else if (changedField === 'project') {
+            rebuildSelect('pmFilter',        allPMs,       '',        'All PMs');
+            rebuildSelect('recruiterFilter', allRecruiters,'',        'All Recruiters');
+            rebuildSelect('sourceFilter',    allSources,   '',        'All Sources');
+        } else if (changedField === 'pm') {
+            rebuildSelect('recruiterFilter', allRecruiters,'',        'All Recruiters');
+            rebuildSelect('sourceFilter',    allSources,   '',        'All Sources');
+        } else if (changedField === 'recruiter') {
+            rebuildSelect('sourceFilter',    allSources,   '',        'All Sources');
+        }
+    } else {
+        // For Financial and HC pages: populate project and PM filters
+        if (changedField === 'init') {
+            rebuildSelect('projectFilter', allProjects, project, 'All Projects');
+            rebuildSelect('pmFilter', allPMs, pm, 'All PMs');
+        } else if (changedField === 'project') {
+            rebuildSelect('pmFilter', allPMs, '', 'All PMs');
+        }
+    }
+}
+
+function onFilterChange(field) {
+    populateFilters(field);
+    applyFilters();
+    updateFilterVisuals();
+}
+
+// ======================================================
+// APPLY FILTERS
+// ======================================================
+function applyFilters() {
+    const project   = document.getElementById('projectFilter').value;
+    const pm        = document.getElementById('pmFilter').value;
+    const recruiter = document.getElementById('recruiterFilter').value;
+    const source    = document.getElementById('sourceFilter').value;
+
+    // Filter recruitment data (uses all 4 filters)
+    currentData = masterData.filter(row => {
+        if (project   && row.Project          !== project)   return false;
+        if (pm        && row.PM               !== pm)        return false;
+        if (recruiter && row.Recruiter        !== recruiter) return false;
+        if (source    && row['Source of Hire']!== source)    return false;
+        return true;
+    });
+
+    // Filter HC data (project and PM filters)
+    hcCurrentData = hcMasterData.filter(row => {
+        if (project && row.PROJECT !== project) return false;
+        if (pm && row.PM !== pm) return false;
+        return true;
+    });
+
+    renderDashboard(currentData);
+    
+    // Check which section is active and render accordingly
+    const activeSection = document.querySelector('.section.active').id;
+    if (activeSection === 'section-hc') {
+        renderHCAnalysis(hcCurrentData);
+    } else if (activeSection === 'section-financial') {
+        renderFinancialSection();
+    }
+
+    const total = currentData.length;
+    const hasFilters = project || pm || recruiter || source;
+    if (hasFilters) {
+        showToast(`Showing ${total} record${total !== 1 ? 's' : ''} matching filters`, 'info', 2500);
+    }
+}
+
+// ======================================================
+// RESET BUTTON
+// ======================================================
+function resetFilters() {
+    ['projectFilter','pmFilter','recruiterFilter','sourceFilter'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    populateFilters('init');
+    updateFilterVisuals();
+    currentData = JSON.parse(JSON.stringify(masterData));
+    hcCurrentData = JSON.parse(JSON.stringify(hcMasterData));
+    renderDashboard(currentData);
+    
+    // Check which section is active and render accordingly
+    const activeSection = document.querySelector('.section.active').id;
+    if (activeSection === 'section-hc') {
+        renderHCAnalysis(hcCurrentData);
+    }
+    
+    showToast('✅ Filters reset — showing all data', 'success', 2000);
+}
+
+function updateFilterVisuals() {
+    const fields = ['project','pm','recruiter','source'];
+    const ids    = ['projectFilter','pmFilter','recruiterFilter','sourceFilter'];
+    let activeCount = 0;
+
+    ids.forEach((id, i) => {
+        const val = document.getElementById(id).value;
+        const grp = document.getElementById('grp-' + fields[i]);
+        if (val) { grp.classList.add('active'); activeCount++; }
+        else { grp.classList.remove('active'); }
+    });
+
+    const resetBtn = document.getElementById('resetBtn');
+    let badge = resetBtn.querySelector('.filter-badge');
+    if (activeCount > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'filter-badge'; resetBtn.appendChild(badge); }
+        badge.textContent = activeCount;
+    } else {
+        if (badge) badge.remove();
+    }
+}
+
+// ======================================================
+// CALCULATE METRICS
+// ======================================================
+function calcMetrics(data) {
+    const total      = data.length;
+    const joined     = data.filter(r => r.Status === 'Joined').length;
+    const cancelled  = data.filter(r => r.Status === 'Cancelled').length;
+    const hold       = data.filter(r => r.Status === 'Hold').length;
+    const offered    = data.filter(r => {
+        const s = (r.Status || '').toLowerCase();
+        const st= (r.Stage  || '').toLowerCase();
+        return s === 'offered' || st.includes('offer') || st === 'loi' || st === 'loi issued';
+    }).length;
+    const wip        = Math.max(0, total - joined - cancelled - hold);
+    const selection  = data.filter(r => r['Selection Date'] && r['Selection Date'] !== null && r['Selection Date'] !== '' && r['Selection Date'] !== 'NaT').length;
+    const ageRecs    = data.filter(r => r.Ageing != null && !isNaN(r.Ageing) && +r.Ageing > 0);
+    const ageing     = ageRecs.length;
+    const avgAging   = ageing > 0 ? (ageRecs.reduce((s,r) => s + +r.Ageing, 0) / ageing) : 0;
+    const ageingPct  = total > 0 ? (ageing / total * 100) : 0;
+    const successRate = total > 0 ? (joined / total * 100) : 0;
+
+    const ttoVals = data.filter(r => r.TTO != null && !isNaN(r.TTO)).map(r => +r.TTO);
+    const ttfVals = data.filter(r => r.TTF != null && !isNaN(r.TTF)).map(r => +r.TTF);
+    const atto = ttoVals.length ? (ttoVals.reduce((a,b) => a+b, 0) / ttoVals.length) : null;
+    const attf = ttfVals.length ? (ttfVals.reduce((a,b) => a+b, 0) / ttfVals.length) : null;
+
+    return { total, joined, cancelled, hold, offered, wip, selection, ageing, avgAging, ageingPct, successRate, atto, attf };
+}
+
+// ======================================================
+// UPDATE KPI DOM
+// ======================================================
+function updateKPIs(m) {
+    document.getElementById('kpi-total').textContent       = m.total.toLocaleString();
+    document.getElementById('kpi-joined').textContent      = m.joined.toLocaleString();
+    document.getElementById('kpi-wip').textContent         = m.wip.toLocaleString();
+    document.getElementById('kpi-offered').textContent     = m.offered.toLocaleString();
+    document.getElementById('kpi-selection').textContent   = m.selection.toLocaleString();
+    document.getElementById('kpi-ageing').textContent      = m.ageing.toLocaleString();
+    document.getElementById('kpi-avgAgeing').textContent   = m.avgAging.toFixed(1);
+    document.getElementById('kpi-hold').textContent        = m.hold.toLocaleString();
+    document.getElementById('kpi-cancelled').textContent   = m.cancelled.toLocaleString();
+    document.getElementById('kpi-ageingPct').textContent   = m.ageingPct.toFixed(1) + '%';
+    document.getElementById('kpi-successRate').textContent = m.successRate.toFixed(1) + '%';
+    document.getElementById('kpi-atto').textContent        = m.atto != null ? m.atto.toFixed(1) : '—';
+    document.getElementById('kpi-attf').textContent        = m.attf != null ? m.attf.toFixed(1) : '—';
+}
+
+// ======================================================
+// RENDER DASHBOARD
+// ======================================================
+function renderDashboard(data) {
+    const metrics = calcMetrics(data);
+    updateKPIs(metrics);
+    updateAllCharts(data);
+}
+
+// ======================================================
+// CHARTS
+// ======================================================
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function groupByMonth(data, dateField) {
+    const counts = {};
+    data.forEach(r => {
+        const raw = r[dateField];
+        if (!raw || raw === 'null' || raw === 'NaT') return;
+        const d = new Date(raw);
+        if (isNaN(d)) return;
+        const key = d.toLocaleDateString('en-GB', { month:'short', year:'2-digit' }).replace(' ', "'");
+        counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+        .map(([k, v]) => {
+            const parts = k.split("'");
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return { key: k, count: v, sort: +('20' + parts[1]) * 12 + months.indexOf(parts[0]) };
+        })
+        .sort((a, b) => a.sort - b.sort)
+        .reduce((acc, {key, count}) => { acc.labels.push(key); acc.values.push(count); return acc; }, {labels:[], values:[]});
+}
+
+function barChart(canvasId, label, data, color) {
+    destroyChart(canvasId);
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type:'bar',
+        data: {
+            labels: data.labels,
+            datasets:[{ 
+                label, 
+                data: data.values, 
+                backgroundColor: color + 'e6', 
+                borderColor: color, 
+                borderWidth:2, 
+                borderRadius:10,
+                hoverBackgroundColor: color + 'ff',
+                hoverBorderWidth: 3
+            }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{display:false},
+                datalabels:{ 
+                    color:'#1e293b', 
+                    font:{weight:'800',size:12}, 
+                    anchor:'end', 
+                    align:'top', 
+                    formatter: v => v > 0 ? v : '',
+                    backgroundColor: 'rgba(255,255,255,0.8)',
+                    borderRadius: 4,
+                    padding: { top: 2, bottom: 2, left: 6, right: 6 }
+                }
+            },
+            scales:{
+                y:{ 
+                    beginAtZero:true, 
+                    ticks:{precision:0, font:{weight:'600'}}, 
+                    grid:{color:'#e2e8f0', lineWidth: 1} 
+                },
+                x:{ 
+                    grid:{display:false},
+                    ticks:{font:{weight:'600'}}
+                }
+            }
+        }
+    });
+}
+
+function doughnutChart(canvasId, labels, values, colors) {
+    destroyChart(canvasId);
+    if (!values.some(v => v > 0)) { renderEmptyChart(canvasId); return; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type:'doughnut',
+        data:{ 
+            labels, 
+            datasets:[{ 
+                data:values, 
+                backgroundColor:colors || COLORS, 
+                borderWidth:4, 
+                borderColor:'white',
+                hoverBorderWidth: 6,
+                hoverBorderColor: 'white'
+            }] 
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{ 
+                    position:'right', 
+                    labels:{
+                        font:{size:11, weight:'600'},
+                        padding:14,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    } 
+                },
+                datalabels:{ 
+                    color:'white', 
+                    font:{weight:'800',size:12}, 
+                    formatter:(v,ctx) => { 
+                        const total=ctx.dataset.data.reduce((a,b)=>a+b,0); 
+                        return total>0?Math.round(v/total*100)+'%':''; 
+                    },
+                    textShadowColor: 'rgba(0,0,0,0.5)',
+                    textShadowBlur: 4
+                }
+            },
+            cutout:'62%'
+        }
+    });
+}
+
+function horizontalBarChart(canvasId, labels, values, colors) {
+    destroyChart(canvasId);
+    if (!values.some(v => v > 0)) { renderEmptyChart(canvasId); return; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type:'bar',
+        data:{ 
+            labels, 
+            datasets:[{ 
+                data:values, 
+                backgroundColor: colors || COLORS.slice(0,labels.length), 
+                borderRadius:8,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.5)'
+            }] 
+        },
+        options:{
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{display:false},
+                datalabels:{ 
+                    color:'#1e293b', 
+                    font:{weight:'800',size:11}, 
+                    anchor:'end', 
+                    align:'right', 
+                    formatter: v => v > 0 ? v : '',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    borderRadius: 4,
+                    padding: { top: 2, bottom: 2, left: 6, right: 6 }
+                }
+            },
+            scales:{
+                x:{ 
+                    beginAtZero:true, 
+                    ticks:{precision:0, font:{weight:'600'}}, 
+                    grid:{color:'#e2e8f0'} 
+                },
+                y:{ 
+                    grid:{display:false},
+                    ticks:{font:{weight:'600'}}
+                }
+            }
+        }
+    });
+}
+
+function renderEmptyChart(canvasId) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    destroyChart(canvasId);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '15px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data to display', ctx.canvas.width / 2, ctx.canvas.height / 2);
+}
+
+function updateAllCharts(data) {
+    // MoM Joiners
+    const joinersData = groupByMonth(data.filter(r => r.Status === 'Joined'), 'Joining Date');
+    if (joinersData.labels.length) barChart('chartJoiners','Joiners', joinersData, '#3b82f6');
+    else renderEmptyChart('chartJoiners');
+
+    // MoM Offers
+    const offersData = groupByMonth(data.filter(r => r['LOI Date']), 'LOI Date');
+    if (offersData.labels.length) barChart('chartOffers','Offers', offersData, '#10b981');
+    else renderEmptyChart('chartOffers');
+
+    // MoM Requisitions
+    const reqsData = groupByMonth(data, 'Requisition Date');
+    if (reqsData.labels.length) barChart('chartReqs','Requirements', reqsData, '#f59e0b');
+    else renderEmptyChart('chartReqs');
+
+    // Source of Hire
+    const sourceCount = {};
+    data.forEach(r => { const s = r['Source of Hire']; if (s) sourceCount[s] = (sourceCount[s]||0)+1; });
+    doughnutChart('chartSource', Object.keys(sourceCount), Object.values(sourceCount));
+
+    // Ageing Brackets
+    const brackets = {'0-30 Days':0,'31-60 Days':0,'61-90 Days':0,'91-180 Days':0,'181-250 Days':0,'>250 Days':0};
+    data.forEach(r => {
+        const ag = r['Ageing Bracket'];
+        const age = r.Ageing;
+        if (ag && brackets.hasOwnProperty(ag)) { brackets[ag]++; return; }
+        if (age == null || isNaN(age)) return;
+        const a = +age;
+        if (a <= 30)  brackets['0-30 Days']++;
+        else if (a <= 60) brackets['31-60 Days']++;
+        else if (a <= 90) brackets['61-90 Days']++;
+        else if (a <= 180) brackets['91-180 Days']++;
+        else if (a <= 250) brackets['181-250 Days']++;
+        else brackets['>250 Days']++;
+    });
+    const bLabels = Object.keys(brackets);
+    const bVals   = Object.values(brackets);
+    horizontalBarChart('chartAgeing', bLabels, bVals, ['#bbf7d0','#fed7aa','#fde68a','#fca5a5','#f87171','#dc2626']);
+
+    // Gender (Joined)
+    const genderCount = {};
+    data.filter(r => r.Status === 'Joined').forEach(r => { const g = r.Gender; if (g) genderCount[g] = (genderCount[g]||0)+1; });
+    doughnutChart('chartGender', Object.keys(genderCount), Object.values(genderCount), ['#6366f1','#ec4899','#14b8a6']);
+}
+
+// ======================================================
+// FINANCIAL SECTION — REAL DATA (HEADCOUNT CHART REMOVED)
+// ======================================================
+const FINANCIAL_DATA = {
+    target:      { Apr:28.857, May:28.477, Jun:22.0, Jul:30.0, Aug:56.0, Sep:40.0, Oct:45.0, Nov:55.0, Dec:45.0, Jan:55.0, Feb:60.0, Mar:60.0 },
+    actual:      { Apr:32.697, May:35.656, Jun:22.661, Jul:50.144, Aug:39.022, Sep:35.87, Oct:37.2, Nov:39.0, Dec:40.7, Jan:29.0, Feb:11.0, Mar:5.12 },
+    achievement: { Apr:113.31, May:125.21, Jun:103.01, Jul:167.15, Aug:69.68, Sep:89.67, Oct:82.67, Nov:70.91, Dec:90.44, Jan:52.73, Feb:18.33, Mar:8.53 },
+    cm_percent:  { Apr:0.40, May:0.25, Jun:-0.52, Jul:-0.57, Aug:0.10, Sep:0.11, Oct:0.11, Nov:0.11, Dec:0.11, Jan:0.11, Feb:0.11, Mar:0.11 }
+};
+
+function renderFinancialSection() {
+    const data   = FINANCIAL_DATA;
+    const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+
+    let totalTarget = 0, totalActual = 0, cmSum = 0, cmCount = 0;
+    months.forEach(m => {
+        totalTarget += data.target[m]      || 0;
+        totalActual += data.actual[m]      || 0;
+        if (data.cm_percent[m] !== undefined) { cmSum += data.cm_percent[m]; cmCount++; }
+    });
+    const achPct = totalTarget > 0 ? (totalActual / totalTarget * 100).toFixed(1) : 0;
+    const avgCM  = cmCount > 0 ? ((cmSum / cmCount) * 100).toFixed(1) : 0;
+
+    document.getElementById('fin-target').textContent  = totalTarget.toFixed(2);
+    document.getElementById('fin-actual').textContent  = totalActual.toFixed(2);
+    document.getElementById('fin-achpct').textContent  = achPct + '%';
+    document.getElementById('fin-cm').textContent      = avgCM + '%';
+
+    // Calculate Quarterly data
+    const q1Actual = (data.actual.Apr || 0) + (data.actual.May || 0) + (data.actual.Jun || 0);
+    const q2Actual = (data.actual.Jul || 0) + (data.actual.Aug || 0) + (data.actual.Sep || 0);
+    const q3Actual = (data.actual.Oct || 0) + (data.actual.Nov || 0) + (data.actual.Dec || 0);
+    const q4Actual = (data.actual.Jan || 0) + (data.actual.Feb || 0) + (data.actual.Mar || 0);
+
+    document.getElementById('fin-q1-actual').textContent = q1Actual.toFixed(2);
+    document.getElementById('fin-q2-actual').textContent = q2Actual.toFixed(2);
+    document.getElementById('fin-q3-actual').textContent = q3Actual.toFixed(2);
+    document.getElementById('fin-q4-actual').textContent = q4Actual.toFixed(2);
+
+    // Chart 1: Target vs Actual
+    destroyChart('chartTarget');
+    charts['chartTarget'] = new Chart(document.getElementById('chartTarget').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'Target',
+                    data: months.map(m => data.target[m] || 0),
+                    backgroundColor: 'rgba(59,130,246,0.85)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    borderRadius: 10,
+                    hoverBackgroundColor: 'rgba(59,130,246,1)',
+                    hoverBorderWidth: 3
+                },
+                {
+                    label: 'Actual',
+                    data: months.map(m => data.actual[m] || 0),
+                    backgroundColor: 'rgba(16,185,129,0.85)',
+                    borderColor: '#10b981',
+                    borderWidth: 2,
+                    borderRadius: 10,
+                    hoverBackgroundColor: 'rgba(16,185,129,1)',
+                    hoverBorderWidth: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels:{font:{size:12, weight:'600'},padding:16, usePointStyle:true} },
+                datalabels: {
+                    anchor: 'end', align: 'top',
+                    color: '#1e293b',
+                    font: { weight: 'bold', size: 10 },
+                    formatter: v => v > 0 ? v.toFixed(1) : '',
+                    backgroundColor: 'rgba(255,255,255,0.85)',
+                    borderRadius: 4,
+                    padding: { top: 2, bottom: 2, left: 5, right: 5 }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { callback: v => v.toFixed(0), font:{weight:'600'} } },
+                x: { grid: { display: false }, ticks:{font:{weight:'600'}} }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+
+    // Chart 2: Contribution Margin % Trend
+    destroyChart('chartCM');
+    charts['chartCM'] = new Chart(document.getElementById('chartCM').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'CM%',
+                data: months.map(m => +(data.cm_percent[m] * 100).toFixed(2) || 0),
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.2)',
+                tension: 0.4, fill: true, borderWidth: 3, pointRadius: 6, pointHoverRadius: 9,
+                pointBackgroundColor: '#f59e0b',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end', align: 'top',
+                    color: '#1e293b',
+                    font: { weight: 'bold', size: 10 },
+                    formatter: v => v !== 0 ? v.toFixed(1) + '%' : '',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    borderRadius: 4,
+                    padding: { top: 2, bottom: 2, left: 5, right: 5 }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: '#e2e8f0' },
+                    ticks: { callback: v => v + '%', font:{weight:'600'} }
+                },
+                x: { grid: { display: false }, ticks:{font:{weight:'600'}} }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+
+    // Chart 3: Achievement % Trend
+    destroyChart('chartAch');
+    charts['chartAch'] = new Chart(document.getElementById('chartAch').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Achievement %',
+                data: months.map(m => data.achievement[m] || 0),
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139,92,246,0.2)',
+                tension: 0.4, fill: true, borderWidth: 3, pointRadius: 6, pointHoverRadius: 9,
+                pointBackgroundColor: '#8b5cf6',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end', align: 'top',
+                    color: '#1e293b',
+                    font: { weight: 'bold', size: 10 },
+                    formatter: v => v > 0 ? v.toFixed(1) + '%' : '',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    borderRadius: 4,
+                    padding: { top: 2, bottom: 2, left: 5, right: 5 }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#e2e8f0' },
+                    ticks: { callback: v => v + '%', font:{weight:'600'} }
+                },
+                x: { grid: { display: false }, ticks:{font:{weight:'600'}} }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+
+    // Chart 4: Quarterly Comparison
+    destroyChart('chartQuarterly');
+    const q1Target = (data.target.Apr || 0) + (data.target.May || 0) + (data.target.Jun || 0);
+    const q2Target = (data.target.Jul || 0) + (data.target.Aug || 0) + (data.target.Sep || 0);
+    const q3Target = (data.target.Oct || 0) + (data.target.Nov || 0) + (data.target.Dec || 0);
+    const q4Target = (data.target.Jan || 0) + (data.target.Feb || 0) + (data.target.Mar || 0);
+
+    charts['chartQuarterly'] = new Chart(document.getElementById('chartQuarterly').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Q1 (Apr-Jun)', 'Q2 (Jul-Sep)', 'Q3 (Oct-Dec)', 'Q4 (Jan-Mar)'],
+            datasets: [
+                {
+                    label: 'Target',
+                    data: [q1Target, q2Target, q3Target, q4Target],
+                    backgroundColor: 'rgba(59,130,246,0.85)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    borderRadius: 10,
+                    hoverBackgroundColor: 'rgba(59,130,246,1)',
+                    hoverBorderWidth: 3
+                },
+                {
+                    label: 'Achievement',
+                    data: [q1Actual, q2Actual, q3Actual, q4Actual],
+                    backgroundColor: 'rgba(16,185,129,0.85)',
+                    borderColor: '#10b981',
+                    borderWidth: 2,
+                    borderRadius: 10,
+                    hoverBackgroundColor: 'rgba(16,185,129,1)',
+                    hoverBorderWidth: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels:{font:{size:12, weight:'600'},padding:16, usePointStyle:true} },
+                datalabels: {
+                    anchor: 'end', align: 'top',
+                    color: '#1e293b',
+                    font: { weight: 'bold', size: 11 },
+                    formatter: v => v > 0 ? v.toFixed(1) : '',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    borderRadius: 4,
+                    padding: { top: 2, bottom: 2, left: 6, right: 6 }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { callback: v => v.toFixed(0), font:{weight:'600'} } },
+                x: { grid: { display: false }, ticks:{font:{weight:'600'}} }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+
+    // Chart 5: Quarterly CM% Comparison
+    destroyChart('chartQuarterlyCM');
+    const q1CM = ((data.cm_percent.Apr || 0) + (data.cm_percent.May || 0) + (data.cm_percent.Jun || 0)) / 3 * 100;
+    const q2CM = ((data.cm_percent.Jul || 0) + (data.cm_percent.Aug || 0) + (data.cm_percent.Sep || 0)) / 3 * 100;
+    const q3CM = ((data.cm_percent.Oct || 0) + (data.cm_percent.Nov || 0) + (data.cm_percent.Dec || 0)) / 3 * 100;
+    const q4CM = ((data.cm_percent.Jan || 0) + (data.cm_percent.Feb || 0) + (data.cm_percent.Mar || 0)) / 3 * 100;
+
+    charts['chartQuarterlyCM'] = new Chart(document.getElementById('chartQuarterlyCM').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Q1 (Apr-Jun)', 'Q2 (Jul-Sep)', 'Q3 (Oct-Dec)', 'Q4 (Jan-Mar)'],
+            datasets: [{
+                label: 'CM%',
+                data: [q1CM, q2CM, q3CM, q4CM],
+                backgroundColor: 'rgba(245,158,11,0.85)',
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                borderRadius: 10,
+                hoverBackgroundColor: 'rgba(245,158,11,1)',
+                hoverBorderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end', align: 'top',
+                    color: '#1e293b',
+                    font: { weight: 'bold', size: 11 },
+                    formatter: v => v.toFixed(1) + '%',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    borderRadius: 4,
+                    padding: { top: 2, bottom: 2, left: 6, right: 6 }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#e2e8f0' }, ticks: { callback: v => v.toFixed(0) + '%', font:{weight:'600'} } },
+                x: { grid: { display: false }, ticks:{font:{weight:'600'}} }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+// ======================================================
+// HC ANALYSIS FUNCTIONS
+// ======================================================
+function renderHCAnalysis(data) {
+    // Calculate HC metrics
+    const total = data.length;
+    const active = data.filter(r => r.Status === 'Active').length;
+    const resigned = data.filter(r => r.Status === 'Resigned').length;
+    const projects = [...new Set(data.map(r => r.PROJECT).filter(Boolean))].length;
+    const recruiters = data.filter(r => r.Role === 'Recruiter').length;
+    const sourcers = data.filter(r => r.Role === 'Sourcer').length;
+    const pm = data.filter(r => r.Role === 'PM').length;
+    const obs = data.filter(r => r.Role === 'OBS').length;
+    const ph = data.filter(r => r.Role === 'PH').length;
+    const dataAnalytics = data.filter(r => r.Role === 'Data & Analytics').length;
+
+    // Update KPIs in correct order
+    document.getElementById('hc-projects').textContent = projects.toLocaleString();
+    document.getElementById('hc-total').textContent = total.toLocaleString();
+    document.getElementById('hc-active').textContent = active.toLocaleString();
+    document.getElementById('hc-resigned').textContent = resigned.toLocaleString();
+    document.getElementById('hc-pm').textContent = pm.toLocaleString();
+    document.getElementById('hc-recruiters').textContent = recruiters.toLocaleString();
+    document.getElementById('hc-sourcers').textContent = sourcers.toLocaleString();
+    document.getElementById('hc-obs').textContent = obs.toLocaleString();
+    document.getElementById('hc-ph').textContent = ph.toLocaleString();
+    document.getElementById('hc-data').textContent = dataAnalytics.toLocaleString();
+
+    // Grade-wise Distribution
+    const gradeCounts = {};
+    data.forEach(r => {
+        const g = r.Grade || 'Unknown';
+        gradeCounts[g] = (gradeCounts[g] || 0) + 1;
+    });
+    const gradeLabels = Object.keys(gradeCounts).sort((a,b) => a-b);
+    const gradeValues = gradeLabels.map(g => gradeCounts[g]);
+    doughnutChart('chartGrade', gradeLabels.map(g => `Grade ${g}`), gradeValues);
+
+    // Role-wise Distribution
+    const roleCounts = {};
+    data.forEach(r => {
+        const role = r.Role || 'Unknown';
+        roleCounts[role] = (roleCounts[role] || 0) + 1;
+    });
+    doughnutChart('chartRole', Object.keys(roleCounts), Object.values(roleCounts));
+
+    // Project-wise Distribution
+    const projectCounts = {};
+    data.forEach(r => {
+        const proj = r.PROJECT || 'Unknown';
+        projectCounts[proj] = (projectCounts[proj] || 0) + 1;
+    });
+    horizontalBarChart('chartHCProject', Object.keys(projectCounts), Object.values(projectCounts));
+
+    // Utilization by Grade
+    const gradeUtil = {};
+    const gradeUtilCount = {};
+    data.forEach(r => {
+        const g = r.Grade || 'Unknown';
+        if (!gradeUtil[g]) { gradeUtil[g] = 0; gradeUtilCount[g] = 0; }
+        gradeUtil[g] += (r.Utilization || 0);
+        gradeUtilCount[g]++;
+    });
+    const gradeUtilLabels = Object.keys(gradeUtil).sort((a,b) => a-b);
+    const gradeUtilValues = gradeUtilLabels.map(g => (gradeUtil[g] / gradeUtilCount[g] * 100));
+    barChart('chartUtilGrade', 'Utilization %', { labels: gradeUtilLabels.map(g => `Grade ${g}`), values: gradeUtilValues }, '#8b5cf6');
+
+    // Utilization by Role
+    const roleUtil = {};
+    const roleUtilCount = {};
+    data.forEach(r => {
+        const role = r.Role || 'Unknown';
+        if (!roleUtil[role]) { roleUtil[role] = 0; roleUtilCount[role] = 0; }
+        roleUtil[role] += (r.Utilization || 0);
+        roleUtilCount[role]++;
+    });
+    const roleUtilLabels = Object.keys(roleUtil);
+    const roleUtilValues = roleUtilLabels.map(role => (roleUtil[role] / roleUtilCount[role] * 100));
+    barChart('chartUtilRole', 'Utilization %', { labels: roleUtilLabels, values: roleUtilValues }, '#14b8a6');
+
+    // PM-wise Headcount
+    const pmCounts = {};
+    data.forEach(r => {
+        const pm = r.PM || 'Unassigned';
+        pmCounts[pm] = (pmCounts[pm] || 0) + 1;
+    });
+    horizontalBarChart('chartPM', Object.keys(pmCounts), Object.values(pmCounts));
+}
+
+// ======================================================
+// EXCEL UPLOAD
+// ======================================================
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    await processFile(file);
+    event.target.value = '';
+}
+
+async function processFile(file) {
+    try {
+        showToast('📂 Reading ' + file.name + '...', 'info', 3000);
+        const data = await file.arrayBuffer();
+        let jsonData = [];
+
+        if (file.name.endsWith('.csv')) {
+            const text = new TextDecoder().decode(data);
+            const lines = text.split('\n').filter(l => l.trim());
+            const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+            jsonData = lines.slice(1).map(line => {
+                const vals = line.split(',').map(v => v.replace(/"/g,'').trim());
+                const obj = {};
+                headers.forEach((h, i) => { obj[h] = vals[i] || null; });
+                return obj;
+            });
+        } else {
+            const wb = XLSX.read(data, { type:'array', cellDates:true, dateNF:'yyyy-mm-dd' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            jsonData = XLSX.utils.sheet_to_json(ws, { defval:null, raw:false });
+        }
+
+        const cleaned = jsonData.map(row => {
+            const clean = {};
+            Object.keys(row).forEach(key => {
+                const k = key.trim().replace(/\s+/g, ' ');
+                let v = row[key];
+                if (v instanceof Date) v = v.toISOString().split('T')[0];
+                if (typeof v === 'string') {
+                    v = v.replace(/\xa0/g, '').trim();
+                    if (!v || v === 'NaT' || v === 'nan' || v === 'None' || v === 'null') v = null;
+                }
+                if (v !== null && !isNaN(v) && v !== '') v = typeof v === 'string' ? (v.includes('.') ? parseFloat(v) : parseInt(v, 10)) : v;
+                clean[k] = v;
+            });
+            return clean;
+        }).filter(r => Object.values(r).some(v => v != null));
+
+        if (cleaned.length === 0) { showToast('❌ No data found in file', 'error'); return; }
+
+        masterData = cleaned;
+        currentData = JSON.parse(JSON.stringify(masterData));
+
+        ['projectFilter','pmFilter','recruiterFilter','sourceFilter'].forEach(id => document.getElementById(id).value = '');
+        populateFilters('init');
+        updateFilterVisuals();
+
+        renderDashboard(currentData);
+
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        document.getElementById('recordCount').textContent = masterData.length + ' records loaded';
+
+        showToast('✅ Loaded ' + cleaned.length + ' records from ' + file.name, 'success', 4000);
+
+    } catch (err) {
+        console.error('Upload error:', err);
+        showToast('❌ Error: ' + err.message, 'error', 5000);
+    }
+}
+
+// ======================================================
+// DRILL-THROUGH MODAL
+// ======================================================
+function showDrillthrough(type) {
+    let title = '', rows = [];
+
+    const data = currentData;
+    const m = calcMetrics(data);
+
+    const groupBy = (field, filterFn) => {
+        const d = filterFn ? data.filter(filterFn) : data;
+        const counts = {};
+        d.forEach(r => { const v = r[field] || 'Unknown'; counts[v] = (counts[v]||0)+1; });
+        return Object.entries(counts).sort((a,b) => b[1]-a[1]);
+    };
+
+    switch(type) {
+        case 'total':
+            title = `Total Requirements (${m.total})`;
+            rows = groupBy('Status');
+            break;
+        case 'joined':
+            title = `Joined Candidates (${m.joined})`;
+            rows = groupBy('Recruiter', r => r.Status === 'Joined');
+            break;
+        case 'wip':
+            title = `Work In Progress (${m.wip})`;
+            rows = groupBy('Stage', r => r.Status !== 'Joined' && r.Status !== 'Cancelled' && r.Status !== 'Hold');
+            break;
+        case 'offered':
+            title = `Offered (${m.offered})`;
+            rows = groupBy('Source of Hire', r => r.Status === 'Offered' || (r.Stage||'').toLowerCase().includes('offer'));
+            break;
+        case 'selection':
+            title = `Selections Made (${m.selection})`;
+            rows = groupBy('Recruiter', r => r['Selection Date'] != null);
+            break;
+        case 'ageing':
+            title = `Ageing Requirements (${m.ageing})`;
+            rows = groupBy('Ageing Bracket', r => r.Ageing != null && !isNaN(r.Ageing) && +r.Ageing > 0);
+            break;
+        case 'hold':
+            title = `On Hold (${m.hold})`;
+            rows = groupBy('Vertical', r => r.Status === 'Hold');
+            break;
+        case 'cancelled':
+            title = `Cancelled (${m.cancelled})`;
+            rows = groupBy('PM', r => r.Status === 'Cancelled');
+            break;
+    }
+
+    const icon = document.getElementById('modalIcon');
+    const iconColors = { total:'#e0e7ff', joined:'#d1fae5', wip:'#fef3c7', offered:'#e0e7ff', selection:'#ede9fe', ageing:'#fee2e2', hold:'#fef9c3', cancelled:'#f3f4f6' };
+    icon.style.background = iconColors[type] || '#e0e7ff';
+
+    document.getElementById('modalTitle').textContent = title;
+
+    let html = '';
+    if (rows.length === 0) {
+        html = '<p style="color:#94a3b8;padding:1.5rem;">No data available for current filters.</p>';
+    } else {
+        html = '<table class="dt-table"><thead><tr><th>Category</th><th>Count</th></tr></thead><tbody>';
+        rows.forEach(([k, v]) => {
+            html += `<tr><td>${k}</td><td><b>${v}</b></td></tr>`;
+        });
+        html += '</tbody></table>';
+    }
+
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('modal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modal').classList.remove('active');
+}
+document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal')) closeModal();
+});
+
+// ======================================================
+// TOAST
+// ======================================================
+function showToast(message, type='info', duration=3000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    const colors = { success:'#10b981', error:'#ef4444', info:'#6366f1', warning:'#f59e0b' };
+    toast.style.background = colors[type] || colors.info;
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(() => { requestAnimationFrame(() => toast.classList.add('show')); });
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 500);
+    }, duration);
+}
+
+// ======================================================
+// MOBILE SIDEBAR CLOSE ON OUTSIDE CLICK
+// ======================================================
+document.addEventListener('click', e => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !e.target.closest('.mobile-fab')) {
+        sidebar.classList.remove('open');
+    }
+});
+</script>
+</body>
+</html>

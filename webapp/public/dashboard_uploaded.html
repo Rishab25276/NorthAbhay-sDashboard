@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>North Recruitment &amp; Financial Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); min-height:100vh; }
+
+        @keyframes slideInLeft { from { transform: translateX(-30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 8px rgba(99,102,241,0.3); } 50% { box-shadow: 0 0 20px rgba(99,102,241,0.7); } }
+        @keyframes countUp { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar { position:fixed; left:0; top:0; width:280px; height:100vh; background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%); box-shadow:8px 0 32px rgba(0,0,0,0.4); z-index:1000; overflow-y:auto; transition:transform 0.3s ease; display:flex; flex-direction:column; animation: slideInLeft 0.5s ease-out; }
+        .sidebar-header { padding:2rem 1.5rem; border-bottom:1px solid rgba(255,255,255,0.1); background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2)); flex-shrink:0; }
+        .sidebar-nav { padding:1rem 0; flex:1; }
+        .nav-item { padding:1rem 1.5rem; cursor:pointer; transition:all 0.3s; border-left:4px solid transparent; display:flex; align-items:center; gap:1rem; color:#94a3b8; font-weight:500; font-size:0.9rem; }
+        .nav-item:hover { background:rgba(99,102,241,0.15); color:#fff; border-left-color:#818cf8; transform: translateX(5px); }
+        .nav-item.active { background:linear-gradient(90deg, rgba(99,102,241,0.25), rgba(99,102,241,0.05)); color:#fff; border-left-color:#6366f1; box-shadow: inset 0 0 20px rgba(99,102,241,0.2); }
+        .nav-item i { font-size:1.1rem; width:22px; text-align:center; transition: transform 0.3s; }
+        .nav-item:hover i { transform: scale(1.2); }
+        .sidebar-footer { padding:1.5rem; border-top:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+
+        /* ===== MAIN ===== */
+        .main-content { margin-left:280px; min-height:100vh; background:transparent; }
+        .top-bar { background:rgba(255,255,255,0.97); backdrop-filter: blur(10px); padding:1.25rem 2rem; box-shadow:0 4px 20px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; position:sticky; top:0; z-index:100; animation: slideInUp 0.5s ease-out; }
+        .content-area { padding:1.75rem 2rem; animation: fadeIn 0.8s ease-out; }
+
+        /* ===== FILTERS ===== */
+        .filter-section { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end; background:linear-gradient(135deg,#ffffff,#f8fafc); padding:1rem 1.25rem; border-radius:1rem; border:2px solid rgba(99,102,241,0.2); box-shadow: 0 4px 16px rgba(99,102,241,0.15); }
+        .filter-group { position:relative; flex:1; min-width:130px; max-width:170px; }
+        .filter-label { display:block; font-size:0.68rem; font-weight:700; color:#64748b; margin-bottom:0.3rem; text-transform:uppercase; letter-spacing:0.5px; }
+        .filter-select { width:100%; padding:0.5rem 2rem 0.5rem 0.65rem; border:2px solid #e2e8f0; border-radius:0.625rem; background:white; font-size:0.8rem; font-weight:500; cursor:pointer; transition:all 0.3s; appearance:none; -webkit-appearance:none; }
+        .filter-select:hover { border-color:#6366f1; box-shadow: 0 2px 8px rgba(99,102,241,0.2); }
+        .filter-select:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,0.15); }
+        .filter-group::after { content:'\f107'; font-family:'Font Awesome 6 Free'; font-weight:900; position:absolute; right:0.65rem; bottom:0.6rem; pointer-events:none; color:#64748b; font-size:0.8rem; transition: transform 0.3s; }
+        .filter-group.active .filter-select { border-color:#6366f1; background:linear-gradient(135deg, #f0f4ff, #ffffff); font-weight:600; color:#4338ca; box-shadow: 0 4px 12px rgba(99,102,241,0.2); }
+        .filter-group.active::after { color:#6366f1; transform: rotate(180deg); }
+        .filter-btn { padding:0.6rem 1.3rem; border:none; border-radius:0.625rem; font-weight:600; font-size:0.8rem; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; gap:0.45rem; position:relative; white-space:nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-reset { background:linear-gradient(135deg,#ef4444,#dc2626); color:white; }
+        .btn-reset:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(239,68,68,0.5); }
+        .btn-upload { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; }
+        .btn-upload:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(99,102,241,0.5); }
+        .filter-badge { position:absolute; top:-8px; right:-8px; width:22px; height:22px; background:linear-gradient(135deg,#ef4444,#dc2626); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:0.65rem; font-weight:700; box-shadow:0 2px 8px rgba(239,68,68,0.5); animation: pulse 2s infinite; }
+
+        /* ===== SECTION ===== */
+        .section { display:none; }
+        .section.active { display:block; animation: fadeIn 0.6s ease-out; }
+
+        /* ===========================
+           ===== PREMIUM KPI CARDS ===
+           =========================== */
+        .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:1.1rem; margin-bottom:1.5rem; }
+        
+        .kpi-card {
+            border-radius:1.1rem;
+            padding:1.4rem 1.25rem 1.1rem;
+            box-shadow:0 4px 20px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+            transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor:pointer;
+            overflow:hidden;
+            position:relative;
+            border:1.5px solid rgba(255,255,255,0.6);
+        }
+        .kpi-card::after {
+            content:'';
+            position:absolute;
+            top:0; right:0; bottom:0; left:0;
+            background:linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 60%);
+            pointer-events:none;
+        }
+        .kpi-card:hover {
+            transform:translateY(-7px) scale(1.025);
+            box-shadow:0 16px 40px rgba(0,0,0,0.16), 0 6px 16px rgba(0,0,0,0.10);
+        }
+
+        /* Premium color themes */
+        .kpi-card.blue   { background:linear-gradient(145deg, #eff6ff 0%, #dbeafe 60%, #bfdbfe 100%); border-color:rgba(59,130,246,0.3); }
+        .kpi-card.green  { background:linear-gradient(145deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%); border-color:rgba(16,185,129,0.3); }
+        .kpi-card.indigo { background:linear-gradient(145deg, #eef2ff 0%, #e0e7ff 60%, #c7d2fe 100%); border-color:rgba(99,102,241,0.3); }
+        .kpi-card.purple { background:linear-gradient(145deg, #f5f3ff 0%, #ede9fe 60%, #ddd6fe 100%); border-color:rgba(139,92,246,0.3); }
+        .kpi-card.orange { background:linear-gradient(145deg, #fffbeb 0%, #fef3c7 60%, #fde68a 100%); border-color:rgba(245,158,11,0.3); }
+        .kpi-card.yellow { background:linear-gradient(145deg, #fefce8 0%, #fef9c3 60%, #fef08a 100%); border-color:rgba(234,179,8,0.3); }
+        .kpi-card.red    { background:linear-gradient(145deg, #fef2f2 0%, #fee2e2 60%, #fecaca 100%); border-color:rgba(239,68,68,0.3); }
+        .kpi-card.gray   { background:linear-gradient(145deg, #f9fafb 0%, #f3f4f6 60%, #e5e7eb 100%); border-color:rgba(107,114,128,0.3); }
+        .kpi-card.teal   { background:linear-gradient(145deg, #f0fdfa 0%, #ccfbf1 60%, #99f6e4 100%); border-color:rgba(20,184,166,0.3); }
+        .kpi-card.pink   { background:linear-gradient(145deg, #fdf2f8 0%, #fce7f3 60%, #fbcfe8 100%); border-color:rgba(236,72,153,0.3); }
+
+        .kpi-icon-wrap {
+            width:40px; height:40px;
+            border-radius:0.75rem;
+            display:flex; align-items:center; justify-content:center;
+            margin-bottom:0.9rem;
+            box-shadow:0 4px 12px rgba(0,0,0,0.1);
+        }
+        .kpi-icon-wrap i { font-size:1.2rem; }
+
+        .kpi-card.blue   .kpi-icon-wrap { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+        .kpi-card.green  .kpi-icon-wrap { background:linear-gradient(135deg,#10b981,#059669); }
+        .kpi-card.indigo .kpi-icon-wrap { background:linear-gradient(135deg,#6366f1,#4f46e5); }
+        .kpi-card.purple .kpi-icon-wrap { background:linear-gradient(135deg,#8b5cf6,#7c3aed); }
+        .kpi-card.orange .kpi-icon-wrap { background:linear-gradient(135deg,#f59e0b,#d97706); }
+        .kpi-card.yellow .kpi-icon-wrap { background:linear-gradient(135deg,#eab308,#ca8a04); }
+        .kpi-card.red    .kpi-icon-wrap { background:linear-gradient(135deg,#ef4444,#dc2626); }
+        .kpi-card.gray   .kpi-icon-wrap { background:linear-gradient(135deg,#6b7280,#4b5563); }
+        .kpi-card.teal   .kpi-icon-wrap { background:linear-gradient(135deg,#14b8a6,#0d9488); }
+        .kpi-card.pink   .kpi-icon-wrap { background:linear-gradient(135deg,#ec4899,#db2777); }
+
+        .kpi-label { color:#475569; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.3rem; }
+        .kpi-value { font-size:2.1rem; font-weight:900; line-height:1; margin:0.2rem 0 0.5rem; animation: countUp 0.5s ease-out; }
+        .kpi-card.blue   .kpi-value { color:#1d4ed8; }
+        .kpi-card.green  .kpi-value { color:#047857; }
+        .kpi-card.indigo .kpi-value { color:#4338ca; }
+        .kpi-card.purple .kpi-value { color:#6d28d9; }
+        .kpi-card.orange .kpi-value { color:#b45309; }
+        .kpi-card.yellow .kpi-value { color:#92400e; }
+        .kpi-card.red    .kpi-value { color:#b91c1c; }
+        .kpi-card.gray   .kpi-value { color:#374151; }
+        .kpi-card.teal   .kpi-value { color:#0f766e; }
+        .kpi-card.pink   .kpi-value { color:#be185d; }
+
+        .kpi-footer { display:flex; align-items:center; justify-content:space-between; margin-top:0.4rem; }
+        .kpi-badge { display:inline-flex; align-items:center; gap:0.3rem; padding:0.22rem 0.6rem; border-radius:9999px; font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
+        .kpi-card.blue   .kpi-badge { background:rgba(59,130,246,0.15); color:#1d4ed8; }
+        .kpi-card.green  .kpi-badge { background:rgba(16,185,129,0.15); color:#047857; }
+        .kpi-card.indigo .kpi-badge { background:rgba(99,102,241,0.15); color:#4338ca; }
+        .kpi-card.purple .kpi-badge { background:rgba(139,92,246,0.15); color:#6d28d9; }
+        .kpi-card.orange .kpi-badge { background:rgba(245,158,11,0.15); color:#b45309; }
+        .kpi-card.yellow .kpi-badge { background:rgba(234,179,8,0.15); color:#92400e; }
+        .kpi-card.red    .kpi-badge { background:rgba(239,68,68,0.15); color:#b91c1c; }
+        .kpi-card.gray   .kpi-badge { background:rgba(107,114,128,0.15); color:#374151; }
+        .kpi-card.teal   .kpi-badge { background:rgba(20,184,166,0.15); color:#0f766e; }
+        .kpi-card.pink   .kpi-badge { background:rgba(236,72,153,0.15); color:#be185d; }
+        .kpi-sub { font-size:0.72rem; color:#64748b; font-weight:500; }
+
+        /* accent line */
+        .kpi-accent {
+            position:absolute; top:0; left:0; right:0; height:4px; border-radius:1.1rem 1.1rem 0 0;
+        }
+        .kpi-card.blue   .kpi-accent { background:linear-gradient(90deg,#3b82f6,#60a5fa); }
+        .kpi-card.green  .kpi-accent { background:linear-gradient(90deg,#10b981,#34d399); }
+        .kpi-card.indigo .kpi-accent { background:linear-gradient(90deg,#6366f1,#818cf8); }
+        .kpi-card.purple .kpi-accent { background:linear-gradient(90deg,#8b5cf6,#a78bfa); }
+        .kpi-card.orange .kpi-accent { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+        .kpi-card.yellow .kpi-accent { background:linear-gradient(90deg,#eab308,#facc15); }
+        .kpi-card.red    .kpi-accent { background:linear-gradient(90deg,#ef4444,#f87171); }
+        .kpi-card.gray   .kpi-accent { background:linear-gradient(90deg,#6b7280,#9ca3af); }
+        .kpi-card.teal   .kpi-accent { background:linear-gradient(90deg,#14b8a6,#2dd4bf); }
+        .kpi-card.pink   .kpi-accent { background:linear-gradient(90deg,#ec4899,#f472b6); }
+
+        /* ===== METRIC CARDS ===== */
+        .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.75rem; margin-bottom:1.75rem; }
+        .metric-card { background:white; border:2px solid rgba(99,102,241,0.15); border-radius:1.25rem; padding:2rem; transition:all 0.4s; box-shadow: 0 4px 16px rgba(99,102,241,0.1); }
+        .metric-card:hover { border-color:rgba(99,102,241,0.4); box-shadow:0 16px 48px rgba(99,102,241,0.2); transform: translateY(-4px); }
+        .metric-label { color:#64748b; font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:1rem; }
+        .metric-value { font-size:3rem; font-weight:800; background:linear-gradient(135deg,#6366f1,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; }
+        .metric-sub { color:#94a3b8; font-size:0.875rem; font-weight:500; margin-top:0.75rem; }
+
+        /* ===== CHARTS ===== */
+        .chart-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:1.25rem; margin-bottom:1.75rem; }
+        .chart-card { background:white; border-radius:1rem; padding:1.5rem; box-shadow:0 4px 16px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.06); border:1px solid rgba(99,102,241,0.1); transition:all 0.4s; }
+        .chart-card:hover { box-shadow:0 12px 32px rgba(0,0,0,0.12); border-color:rgba(99,102,241,0.25); transform: translateY(-3px); }
+        .chart-title { font-size:0.95rem; font-weight:700; color:#1e293b; margin-bottom:1.25rem; display:flex; align-items:center; gap:0.65rem; }
+        .chart-container { position:relative; height:300px; }
+        .chart-container.sm { height:260px; }
+
+        /* ===== FINANCIAL TILES (smaller) ===== */
+        .fin-kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(145px,1fr)); gap:0.9rem; margin-bottom:1.5rem; }
+        .fin-kpi {
+            border-radius:0.875rem;
+            padding:1rem 1.1rem;
+            color:white;
+            cursor:pointer;
+            transition:all 0.4s;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            position:relative; overflow:hidden;
+        }
+        .fin-kpi::before {
+            content:'';
+            position:absolute; top:-30px; right:-30px;
+            width:80px; height:80px;
+            border-radius:50%;
+            background:rgba(255,255,255,0.1);
+            pointer-events:none;
+        }
+        .fin-kpi:hover { transform:translateY(-5px) scale(1.025); box-shadow: 0 10px 28px rgba(0,0,0,0.25); }
+        .fin-kpi-label { font-size:0.65rem; opacity:0.95; margin-bottom:0.3rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+        .fin-kpi-value { font-size:1.6rem; font-weight:800; line-height:1.1; }
+        .fin-kpi-unit { font-size:0.65rem; opacity:0.85; margin-top:0.3rem; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index:9999; align-items:center; justify-content:center; }
+        .modal-overlay.active { display:flex; }
+        .modal-box { background:white; border-radius:1.25rem; padding:3rem; max-width:560px; width:90%; text-align:center; box-shadow:0 32px 80px rgba(0,0,0,0.4); animation:modalIn 0.3s ease; }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
+        .modal-icon { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+        .modal-title { font-size:1.5rem; font-weight:700; color:#1e293b; margin-bottom:0.75rem; }
+        .modal-body { color:#64748b; font-size:0.95rem; line-height:1.7; max-height:360px; overflow-y:auto; margin-bottom:2rem; }
+        .modal-close-btn { padding:0.875rem 2.5rem; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:0.625rem; font-weight:700; cursor:pointer; font-size:1rem; transition:all 0.3s; }
+        .modal-close-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(99,102,241,0.4); }
+
+        /* ===== TOAST ===== */
+        #toastContainer { position:fixed; bottom:2rem; right:2rem; z-index:99999; display:flex; flex-direction:column; gap:0.75rem; align-items:flex-end; }
+        .toast { padding:1rem 1.5rem; border-radius:0.75rem; font-weight:600; font-size:0.9rem; box-shadow:0 8px 32px rgba(0,0,0,0.25); transform:translateX(120%); transition:transform 0.5s cubic-bezier(0.4,0,0.2,1); color:white; min-width:240px; max-width:400px; }
+        .toast.show { transform:translateX(0); }
+
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .spin { animation:spin 1s linear infinite; display:inline-block; }
+        .mobile-fab { display:none; position:fixed; bottom:2rem; left:2rem; width:56px; height:56px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; border:none; border-radius:50%; font-size:1.4rem; cursor:pointer; box-shadow:0 8px 32px rgba(99,102,241,0.5); z-index:999; transition: all 0.3s; }
+        @media(max-width:1024px){ .sidebar{transform:translateX(-100%);} .sidebar.open{transform:translateX(0);} .main-content{margin-left:0;} .mobile-fab{display:flex;align-items:center;justify-content:center;} .chart-grid{grid-template-columns:1fr;} }
+        .section-header { font-size:1.6rem; font-weight:800; color:white; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.85rem; text-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .dt-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+        .dt-table th { background:#f8fafc; padding:0.65rem 0.85rem; text-align:left; font-weight:700; color:#374151; border-bottom:2px solid #e5e7eb; font-size:0.75rem; text-transform:uppercase; }
+        .dt-table td { padding:0.65rem 0.85rem; border-bottom:1px solid #f1f5f9; color:#374151; }
+        .dt-table tr:hover td { background:#f8fafc; }
+        .upload-area { border:3px dashed #cbd5e1; border-radius:1.25rem; padding:3rem; text-align:center; background:#f8fafc; transition:all 0.4s; cursor:pointer; }
+        .upload-area:hover { border-color:#6366f1; background:linear-gradient(135deg, #eef2ff, #f8fafc); }
+
+        /* HC section sub-heading */
+        .sub-section-title {
+            color:white;
+            font-size:1.05rem;
+            font-weight:700;
+            margin:1.5rem 0 0.85rem;
+            display:flex;
+            align-items:center;
+            gap:0.6rem;
+            padding:0.6rem 1rem;
+            background:rgba(99,102,241,0.15);
+            border-radius:0.75rem;
+            border-left:4px solid #6366f1;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div style="color:white;">
+            <i class="fas fa-chart-line" style="font-size:2.25rem;color:#818cf8;"></i>
+            <h2 style="font-size:1.35rem;font-weight:800;margin-top:0.85rem;letter-spacing:-0.3px;line-height:1.3;">North Recruitment</h2>
+            <p style="color:#94a3b8;font-size:0.8rem;margin-top:0.25rem;">Financial Dashboard</p>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-item active" id="nav-recruitment" onclick="switchSection('recruitment')">
+            <i class="fas fa-users"></i>
+            <span>Recruitment Analysis</span>
+        </div>
+        <div class="nav-item" id="nav-financial" onclick="switchSection('financial')">
+            <i class="fas fa-chart-bar"></i>
+            <span>Financial Analysis</span>
+        </div>
+        <div class="nav-item" id="nav-hc" onclick="switchSection('hc')">
+            <i class="fas fa-user-friends"></i>
+            <span>HC Analysis</span>
+        </div>
+        <div class="nav-item" onclick="document.getElementById('fileInput').click()">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>Upload Data</span>
+        </div>
+    </nav>
+    <div class="sidebar-footer">
+        <div style="color:#64748b;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Last Updated</div>
+        <div style="color:#e2e8f0;font-weight:600;font-size:0.9rem;margin-top:0.4rem;" id="lastUpdated">—</div>
+        <div style="color:#475569;font-size:0.8rem;margin-top:0.85rem;" id="recordCount">— records loaded</div>
+    </div>
+</div>
+
+<button class="mobile-fab" onclick="document.getElementById('sidebar').classList.toggle('open')">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+    <!-- TOP BAR -->
+    <div class="top-bar">
+        <h1 style="font-size:1.4rem;font-weight:800;color:#1e293b;white-space:nowrap;">North Recruitment &amp; Financial Dashboard</h1>
+        <div class="filter-section">
+            <div class="filter-group" id="grp-project">
+                <label class="filter-label"><i class="fas fa-building" style="margin-right:3px;"></i>Project</label>
+                <select class="filter-select" id="projectFilter" onchange="onFilterChange('project')">
+                    <option value="">All Projects</option>
+                </select>
+            </div>
+            <div class="filter-group" id="grp-pm">
+                <label class="filter-label"><i class="fas fa-user-tie" style="margin-right:3px;"></i>Project Manager</label>
+                <select class="filter-select" id="pmFilter" onchange="onFilterChange('pm')">
+                    <option value="">All PMs</option>
+                </select>
+            </div>
+            <div class="filter-group" id="grp-recruiter">
+                <label class="filter-label"><i class="fas fa-user-friends" style="margin-right:3px;"></i>Recruiter</label>
+                <select class="filter-select" id="recruiterFilter" onchange="onFilterChange('recruiter')">
+                    <option value="">All Recruiters</option>
+                </select>
+            </div>
+            <div class="filter-group" id="grp-source">
+                <label class="filter-label"><i class="fas fa-filter" style="margin-right:3px;"></i>Source</label>
+                <select class="filter-select" id="sourceFilter" onchange="onFilterChange('source')">
+                    <option value="">All Sources</option>
+                </select>
+            </div>
+            <button class="filter-btn btn-reset" id="resetBtn" onclick="resetFilters()">
+                <i class="fas fa-redo-alt"></i> Reset
+            </button>
+            <button class="filter-btn btn-upload" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-cloud-upload-alt"></i> Upload
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTENT AREA -->
+    <div class="content-area">
+
+        <!-- ===== RECRUITMENT SECTION ===== -->
+        <div id="section-recruitment" class="section active">
+            <div class="section-header">
+                <i class="fas fa-users" style="color:#ffffff;"></i>
+                Recruitment Analysis
+            </div>
+
+            <!-- KPI Grid: sequence - Total→Joined→Offered→Selection→WIP→OnHold→Cancelled→Ageing→Ageing%→Analysis -->
+            <div class="kpi-grid">
+                <!-- 1. Total Requirements -->
+                <div class="kpi-card blue" onclick="showDrillthrough('total')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-clipboard-list" style="color:white;"></i></div>
+                    <div class="kpi-label">Total Requirements</div>
+                    <div class="kpi-value" id="kpi-total">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-database" style="font-size:0.55rem;"></i> All Records</span>
+                    </div>
+                </div>
+                <!-- 2. Joined -->
+                <div class="kpi-card green" onclick="showDrillthrough('joined')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-user-check" style="color:white;"></i></div>
+                    <div class="kpi-label">Joined</div>
+                    <div class="kpi-value" id="kpi-joined">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-check-circle" style="font-size:0.55rem;"></i> Completed</span>
+                    </div>
+                </div>
+                <!-- 3. Offered -->
+                <div class="kpi-card indigo" onclick="showDrillthrough('offered')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-file-contract" style="color:white;"></i></div>
+                    <div class="kpi-label">Offered</div>
+                    <div class="kpi-value" id="kpi-offered">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-handshake" style="font-size:0.55rem;"></i> Offers Made</span>
+                    </div>
+                </div>
+                <!-- 4. Selection -->
+                <div class="kpi-card purple" onclick="showDrillthrough('selection')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-user-plus" style="color:white;"></i></div>
+                    <div class="kpi-label">Selection</div>
+                    <div class="kpi-value" id="kpi-selection">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-star" style="font-size:0.55rem;"></i> Selected</span>
+                    </div>
+                </div>
+                <!-- 5. WIP -->
+                <div class="kpi-card orange" onclick="showDrillthrough('wip')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-spinner" style="color:white;"></i></div>
+                    <div class="kpi-label">WIP</div>
+                    <div class="kpi-value" id="kpi-wip">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-cogs" style="font-size:0.55rem;"></i> In Process</span>
+                    </div>
+                </div>
+                <!-- 6. On Hold -->
+                <div class="kpi-card yellow" onclick="showDrillthrough('hold')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-pause-circle" style="color:white;"></i></div>
+                    <div class="kpi-label">On Hold</div>
+                    <div class="kpi-value" id="kpi-hold">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-pause" style="font-size:0.55rem;"></i> Paused</span>
+                    </div>
+                </div>
+                <!-- 7. Cancelled -->
+                <div class="kpi-card gray" onclick="showDrillthrough('cancelled')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-ban" style="color:white;"></i></div>
+                    <div class="kpi-label">Cancelled</div>
+                    <div class="kpi-value" id="kpi-cancelled">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-times-circle" style="font-size:0.55rem;"></i> Closed</span>
+                    </div>
+                </div>
+                <!-- 8. Ageing Requirements -->
+                <div class="kpi-card red" onclick="showDrillthrough('ageing')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-clock" style="color:white;"></i></div>
+                    <div class="kpi-label">Ageing Requirements</div>
+                    <div class="kpi-value" id="kpi-ageing">0</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-hourglass-half" style="font-size:0.55rem;"></i> Overdue</span>
+                        <span class="kpi-sub">Avg <b id="kpi-avgAgeing">0</b>d</span>
+                    </div>
+                </div>
+                <!-- 9. Ageing % -->
+                <div class="kpi-card pink" onclick="showDrillthrough('ageingPct')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-percent" style="color:white;"></i></div>
+                    <div class="kpi-label">Ageing Req %</div>
+                    <div class="kpi-value" id="kpi-ageingPct">0%</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-chart-pie" style="font-size:0.55rem;"></i> of Total</span>
+                    </div>
+                </div>
+                <!-- 10. Success Rate (Analysis) -->
+                <div class="kpi-card teal" onclick="showDrillthrough('successRate')">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-chart-line" style="color:white;"></i></div>
+                    <div class="kpi-label">Success Rate</div>
+                    <div class="kpi-value" id="kpi-successRate">0%</div>
+                    <div class="kpi-footer">
+                        <span class="kpi-badge"><i class="fas fa-trophy" style="font-size:0.55rem;"></i> Joined/Total</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Metrics -->
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label"><i class="fas fa-stopwatch" style="margin-right:6px;color:#6366f1;"></i>Average Time to Offer</div>
+                    <div class="metric-value" id="kpi-atto">—</div>
+                    <div class="metric-sub">Days from requisition to offer</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label"><i class="fas fa-hourglass-end" style="margin-right:6px;color:#8b5cf6;"></i>Average Time to Fill</div>
+                    <div class="metric-value" id="kpi-attf">—</div>
+                    <div class="metric-sub">Days from requisition to joining</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-calendar-check" style="color:#3b82f6;"></i>Month on Month Joiners</h3>
+                    <div class="chart-container"><canvas id="chartJoiners"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-handshake" style="color:#10b981;"></i>Month on Month Offers</h3>
+                    <div class="chart-container"><canvas id="chartOffers"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-plus-circle" style="color:#f59e0b;"></i>Month on Month Requirements</h3>
+                    <div class="chart-container"><canvas id="chartReqs"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-chart-pie" style="color:#8b5cf6;"></i>Source of Hire Mix</h3>
+                    <div class="chart-container sm"><canvas id="chartSource"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-hourglass-half" style="color:#ef4444;"></i>Ageing Bracket Analysis</h3>
+                    <div class="chart-container sm"><canvas id="chartAgeing"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-venus-mars" style="color:#ec4899;"></i>Gender Diversity (Joined)</h3>
+                    <div class="chart-container sm"><canvas id="chartGender"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FINANCIAL SECTION ===== -->
+        <div id="section-financial" class="section">
+            <div class="section-header">
+                <i class="fas fa-chart-bar" style="color:#ffffff;"></i>
+                Financial Analysis
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <h3 style="color:white;font-size:1rem;font-weight:700;margin-bottom:0.85rem;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-calendar-alt" style="color:#60a5fa;"></i>Year-to-Date Performance
+                </h3>
+            </div>
+            <div class="fin-kpi-grid">
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 6px 24px rgba(59,130,246,0.4);">
+                    <div class="fin-kpi-label">Total Target (YTD)</div>
+                    <div class="fin-kpi-value" id="fin-target">0</div>
+                    <div class="fin-kpi-unit">Lakhs (YTD)</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 6px 24px rgba(16,185,129,0.4);">
+                    <div class="fin-kpi-label">Total Achievement (YTD)</div>
+                    <div class="fin-kpi-value" id="fin-actual">0</div>
+                    <div class="fin-kpi-unit">Lakhs (YTD)</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 6px 24px rgba(139,92,246,0.4);">
+                    <div class="fin-kpi-label">Achievement %</div>
+                    <div class="fin-kpi-value" id="fin-achpct">0%</div>
+                    <div class="fin-kpi-unit">vs Target</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 6px 24px rgba(245,158,11,0.4);">
+                    <div class="fin-kpi-label">Avg CM%</div>
+                    <div class="fin-kpi-value" id="fin-cm">0%</div>
+                    <div class="fin-kpi-unit">Contribution Margin</div>
+                </div>
+            </div>
+
+            <div style="margin:1.75rem 0 0.85rem;">
+                <h3 style="color:white;font-size:1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-line" style="color:#34d399;"></i>Quarter on Quarter Performance
+                </h3>
+            </div>
+            <div class="fin-kpi-grid">
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#14b8a6,#0d9488);box-shadow:0 6px 24px rgba(20,184,166,0.4);">
+                    <div class="fin-kpi-label">Q1 (Apr-Jun)</div>
+                    <div class="fin-kpi-value" id="fin-q1-actual">0</div>
+                    <div class="fin-kpi-unit">Achievement (Lakhs)</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 6px 24px rgba(6,182,212,0.4);">
+                    <div class="fin-kpi-label">Q2 (Jul-Sep)</div>
+                    <div class="fin-kpi-value" id="fin-q2-actual">0</div>
+                    <div class="fin-kpi-unit">Achievement (Lakhs)</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 6px 24px rgba(139,92,246,0.4);">
+                    <div class="fin-kpi-label">Q3 (Oct-Dec)</div>
+                    <div class="fin-kpi-value" id="fin-q3-actual">0</div>
+                    <div class="fin-kpi-unit">Achievement (Lakhs)</div>
+                </div>
+                <div class="fin-kpi" style="background:linear-gradient(135deg,#ec4899,#db2777);box-shadow:0 6px 24px rgba(236,72,153,0.4);">
+                    <div class="fin-kpi-label">Q4 (Jan-Mar)</div>
+                    <div class="fin-kpi-value" id="fin-q4-actual">0</div>
+                    <div class="fin-kpi-unit">Achievement (Lakhs)</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-chart-bar" style="color:#3b82f6;"></i>Target vs Achievement (Monthly)</h3>
+                    <div class="chart-container"><canvas id="chartTarget"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-percentage" style="color:#f59e0b;"></i>CM% Trend (Monthly)</h3>
+                    <div class="chart-container"><canvas id="chartCM"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-trophy" style="color:#10b981;"></i>Achievement % Trend (Monthly)</h3>
+                    <div class="chart-container"><canvas id="chartAch"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-chart-area" style="color:#14b8a6;"></i>Quarter on Quarter Comparison</h3>
+                    <div class="chart-container"><canvas id="chartQuarterly"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-percent" style="color:#f59e0b;"></i>Quarter on Quarter CM%</h3>
+                    <div class="chart-container"><canvas id="chartQuarterlyCM"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== HC ANALYSIS SECTION ===== -->
+        <div id="section-hc" class="section">
+            <div class="section-header">
+                <i class="fas fa-user-friends" style="color:#ffffff;"></i>
+                HC Analysis
+            </div>
+
+            <!-- HC KPI Tiles -->
+            <div class="kpi-grid">
+                <div class="kpi-card blue">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-users" style="color:white;"></i></div>
+                    <div class="kpi-label">Total Headcount</div>
+                    <div class="kpi-value" id="hc-total">0</div>
+                    <div class="kpi-footer"><span class="kpi-badge">All Resources</span></div>
+                </div>
+                <div class="kpi-card green">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-check-circle" style="color:white;"></i></div>
+                    <div class="kpi-label">Active Resources</div>
+                    <div class="kpi-value" style="color:#047857;" id="hc-active">0</div>
+                    <div class="kpi-footer"><span class="kpi-badge">Status: Active</span></div>
+                </div>
+                <div class="kpi-card purple">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-briefcase" style="color:white;"></i></div>
+                    <div class="kpi-label">Total Projects</div>
+                    <div class="kpi-value" style="color:#6d28d9;" id="hc-projects">0</div>
+                    <div class="kpi-footer"><span class="kpi-badge">Active Projects</span></div>
+                </div>
+                <div class="kpi-card indigo">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-chart-pie" style="color:white;"></i></div>
+                    <div class="kpi-label">Avg Utilization</div>
+                    <div class="kpi-value" style="color:#4338ca;" id="hc-util">0%</div>
+                    <div class="kpi-footer"><span class="kpi-badge">Overall</span></div>
+                </div>
+                <div class="kpi-card orange">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-user-tie" style="color:white;"></i></div>
+                    <div class="kpi-label">Recruiters</div>
+                    <div class="kpi-value" style="color:#b45309;" id="hc-recruiters">0</div>
+                    <div class="kpi-footer"><span class="kpi-badge">Role Count</span></div>
+                </div>
+                <div class="kpi-card teal">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-search" style="color:white;"></i></div>
+                    <div class="kpi-label">Sourcers</div>
+                    <div class="kpi-value" style="color:#0f766e;" id="hc-sourcers">0</div>
+                    <div class="kpi-footer"><span class="kpi-badge">Role Count</span></div>
+                </div>
+                <div class="kpi-card pink">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-user-shield" style="color:white;"></i></div>
+                    <div class="kpi-label">PMs</div>
+                    <div class="kpi-value" style="color:#be185d;" id="hc-pms">0</div>
+                    <div class="kpi-footer"><span class="kpi-badge">Project Heads</span></div>
+                </div>
+                <div class="kpi-card yellow">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="fas fa-chart-bar" style="color:white;"></i></div>
+                    <div class="kpi-label">Utilization Sum</div>
+                    <div class="kpi-value" style="color:#92400e;" id="hc-util-sum">0</div>
+                    <div class="kpi-footer"><span class="kpi-badge">Total FTE</span></div>
+                </div>
+            </div>
+
+            <!-- Grade-wise & Role-wise Analysis -->
+            <div class="sub-section-title">
+                <i class="fas fa-layer-group" style="color:#818cf8;"></i>
+                Grade-wise &amp; Role-wise Analysis
+            </div>
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-star" style="color:#f59e0b;"></i>Grade-wise Distribution (Count)</h3>
+                    <div class="chart-container"><canvas id="chartGrade"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-user-cog" style="color:#6366f1;"></i>Role-wise Distribution (Count)</h3>
+                    <div class="chart-container"><canvas id="chartRole"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-tachometer-alt" style="color:#8b5cf6;"></i>Utilization Sum by Grade</h3>
+                    <div class="chart-container"><canvas id="chartUtilGrade"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-layer-group" style="color:#14b8a6;"></i>Utilization Sum by Role</h3>
+                    <div class="chart-container"><canvas id="chartUtilRole"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Project & PM Analysis -->
+            <div class="sub-section-title">
+                <i class="fas fa-building" style="color:#34d399;"></i>
+                Project &amp; PM Analysis
+            </div>
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-building" style="color:#10b981;"></i>Project-wise Headcount</h3>
+                    <div class="chart-container"><canvas id="chartHCProject"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-users-cog" style="color:#ef4444;"></i>PM-wise Headcount</h3>
+                    <div class="chart-container"><canvas id="chartPM"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-chart-bar" style="color:#3b82f6;"></i>Project-wise Utilization Sum</h3>
+                    <div class="chart-container"><canvas id="chartProjUtil"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-user-tie" style="color:#6366f1;"></i>Grade Distribution by Project</h3>
+                    <div class="chart-container"><canvas id="chartGradeProject"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Overall Summary -->
+            <div class="sub-section-title">
+                <i class="fas fa-chart-line" style="color:#f472b6;"></i>
+                Overall Headcount Summary
+            </div>
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-signal" style="color:#f59e0b;"></i>Employment Status Overview</h3>
+                    <div class="chart-container sm"><canvas id="chartEmpStatus"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title"><i class="fas fa-percentage" style="color:#14b8a6;"></i>Utilization Distribution</h3>
+                    <div class="chart-container sm"><canvas id="chartUtilDist"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileUpload(event)">
+
+<div class="modal-overlay" id="modal">
+    <div class="modal-box">
+        <div class="modal-icon" id="modalIcon" style="background:#e0e7ff;"><i class="fas fa-info" style="color:#6366f1;font-size:2rem;"></i></div>
+        <div class="modal-title" id="modalTitle">Details</div>
+        <div class="modal-body" id="modalBody"></div>
+        <button class="modal-close-btn" onclick="closeModal()">Close</button>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+// ======================================================
+// EMBEDDED DATA
+// ======================================================
+const EMBEDDED_DATA = [{"Sr. No.":1,"Project":"MSIL","Requisition Date":"2024-05-07","Job ID":31507,"Job Name":"Finance & Compliance Executive","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"Shikha Swami","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Poonam Saharan","Gender":"Female","Email ID":"poonamsaharan009@gmail.com","Selection Date":"2025-06-05","LOI Date":"2025-06-16","Joining Date":"2025-08-01","Source of Hire":"Taggd","RSLA":null,"TTO":405.0,"TTF":451.0,"Ageing":null,"Ageing Bracket":null},{"Sr. No.":2,"Project":"MSIL","Requisition Date":"2024-05-07","Job ID":31507,"Job Name":"Finance & Compliance Executive","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"IJP","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Rishi Kapoor","Gender":"Female","Email ID":"rishi.kapoor@maruti.co.in","Selection Date":"2024-11-26","LOI Date":"2024-11-26","Joining Date":"2025-05-07","Source of Hire":"IJP","RSLA":null,"TTO":203.0,"TTF":365.0,"Ageing":null,"Ageing Bracket":null},{"Sr. No.":3,"Project":"MSIL","Requisition Date":"2024-05-07","Job ID":31507,"Job Name":"Finance & Compliance Executive","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":null,"PM":"Mukesh Dubey","Stage":"In_Process","Status":"Final Interview","Candidate Name":null,"Gender":null,"Email ID":null,"Selection Date":null,"LOI Date":null,"Joining Date":null,"Source of Hire":null,"RSLA":90.0,"TTO":null,"TTF":null,"Ageing":567.0,"Ageing Bracket":">250 Days"},{"Sr. No.":4,"Project":"MSIL","Requisition Date":"2024-08-06","Job ID":32352,"Job Name":"Project Manager","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"IJP","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Agarwal Rishabh","Gender":"Male","Email ID":"Rishabh.Agarwal@maruti.co.in","Selection Date":"2024-12-16","LOI Date":"2024-12-16","Joining Date":"2025-04-21","Source of Hire":"IJP","RSLA":null,"TTO":132.0,"TTF":258.0,"Ageing":null,"Ageing Bracket":null},{"Sr. No.":5,"Project":"MSIL","Requisition Date":"2025-01-07","Job ID":32667,"Job Name":"Skilling Manager -Technical","Vertical":"CPA","Business HRBP":"SLHR","Recruiter":"Shikha Swami","Sourcer":"Shikha Swami","PM":"Mukesh Dubey","Stage":"Joined","Status":"Joined","Candidate Name":"Harish Yadav","Gender":"Male","Email ID":"0494harishyadav@gmail.com","Selection Date":"2025-02-19","LOI Date":"2025-03-29","Joining Date":"2025-04-08","Source of Hire":"Taggd","RSLA":null,"TTO":81.0,"TTF":91.0,"Ageing":null,"Ageing Bracket":null}];
+
+const HC_DATA = [{"SNO":1,"EmpStatus":"Active","EMP_CODE":10003,"EMP_NAME":"Kolli Pushpa","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":2,"EmpStatus":"Active","EMP_CODE":10114,"EMP_NAME":"Yogita Porwal","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"OBS","Grade":3,"PM":"Ashish"},{"SNO":3,"EmpStatus":"Resigned","EMP_CODE":10209,"EMP_NAME":"Pooja Narayan Kolte","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":4,"EmpStatus":"Active","EMP_CODE":10221,"EMP_NAME":"Machindra Gulabrao Kokare","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":5,"EmpStatus":"Active","EMP_CODE":10241,"EMP_NAME":"Rashmi Chasta","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":6,"EmpStatus":"Active","EMP_CODE":10248,"EMP_NAME":"Supriya Mangesh Joshi","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":7,"EmpStatus":"Active","EMP_CODE":10280,"EMP_NAME":"Margaret Moses Hirekerur","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":8,"EmpStatus":"Active","EMP_CODE":10386,"EMP_NAME":"DIKSHA KAILAS KHARAT","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":9,"EmpStatus":"Active","EMP_CODE":10468,"EMP_NAME":"Kumari Kanak Lata","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":10,"EmpStatus":"Active","EMP_CODE":10684,"EMP_NAME":"Vishakha Jain","PROJECT":"Jindal Stainless","Utilization":1.0,"Status":"Ok","Role":"OBS","Grade":3,"PM":"Kunal Mohan"},{"SNO":11,"EmpStatus":"Active","EMP_CODE":10685,"EMP_NAME":"Vinay Kumar","PROJECT":"Jindal Stainless","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":"Kunal Mohan"},{"SNO":12,"EmpStatus":"Active","EMP_CODE":10694,"EMP_NAME":"Uma Dinesh Soni","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"OBS","Grade":3,"PM":"Ashish"},{"SNO":13,"EmpStatus":"Active","EMP_CODE":10750,"EMP_NAME":"Mohit Yadav","PROJECT":"Sterling Tools","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":6,"PM":null},{"SNO":14,"EmpStatus":"Active","EMP_CODE":10788,"EMP_NAME":"Akankhya Mohapatra","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":15,"EmpStatus":"Active","EMP_CODE":10823,"EMP_NAME":"Kanika Goyal","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":16,"EmpStatus":"Active","EMP_CODE":10842,"EMP_NAME":"Nupur Rajesh Sharnagat","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":2,"PM":null},{"SNO":17,"EmpStatus":"Active","EMP_CODE":10864,"EMP_NAME":"PRACHI CHOURASIA","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":18,"EmpStatus":"Active","EMP_CODE":10880,"EMP_NAME":"DEEPALI SINGH","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":19,"EmpStatus":"Active","EMP_CODE":10929,"EMP_NAME":"VAISHALI SINGH","PROJECT":"Jindal Stainless","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":"Kunal Mohan"},{"SNO":20,"EmpStatus":"Active","EMP_CODE":10959,"EMP_NAME":"Kanchan Ravi Bhandari","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":21,"EmpStatus":"Active","EMP_CODE":10968,"EMP_NAME":"Megha Taneja","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":22,"EmpStatus":"Active","EMP_CODE":10972,"EMP_NAME":"Ravi Ranjan Kumar","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":23,"EmpStatus":"Active","EMP_CODE":10995,"EMP_NAME":"Madiha Naaz","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":24,"EmpStatus":"Active","EMP_CODE":10999,"EMP_NAME":"KRISHIBHA SHARMA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":25,"EmpStatus":"Active","EMP_CODE":11004,"EMP_NAME":"ABHISHEK KAPOOR","PROJECT":"Subros Ltd","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":26,"EmpStatus":"Active","EMP_CODE":11012,"EMP_NAME":"URVASHI SHARMA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":27,"EmpStatus":"Active","EMP_CODE":11016,"EMP_NAME":"Riya Miglani","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":28,"EmpStatus":"Active","EMP_CODE":11032,"EMP_NAME":"VAIBHAV SINGH","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":29,"EmpStatus":"Active","EMP_CODE":11036,"EMP_NAME":"KOMAL CHOPRA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":30,"EmpStatus":"Active","EMP_CODE":11077,"EMP_NAME":"SOUMYA GOLASH","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":31,"EmpStatus":"Active","EMP_CODE":11078,"EMP_NAME":"MEENAKSHI PUPNEJA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":32,"EmpStatus":"Active","EMP_CODE":11082,"EMP_NAME":"RAVINA .","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":33,"EmpStatus":"Active","EMP_CODE":11084,"EMP_NAME":"Nikita Gupta","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":34,"EmpStatus":"Active","EMP_CODE":11090,"EMP_NAME":"Ashish Pandey","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":6,"PM":null},{"SNO":35,"EmpStatus":"Active","EMP_CODE":11100,"EMP_NAME":"N Ashok Kumar","PROJECT":"Sterling Tools","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":36,"EmpStatus":"Active","EMP_CODE":11107,"EMP_NAME":"Hema Chaudhary","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":37,"EmpStatus":"Active","EMP_CODE":11125,"EMP_NAME":"Anupama Harshvardhan","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":38,"EmpStatus":"Active","EMP_CODE":11145,"EMP_NAME":"Shubham Bhadauria","PROJECT":"Sterling Tools","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":39,"EmpStatus":"Active","EMP_CODE":11147,"EMP_NAME":"MUSKAN TIWARI","PROJECT":"Subros Ltd","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":40,"EmpStatus":"Active","EMP_CODE":11149,"EMP_NAME":"DIKSHA GUPTA","PROJECT":"Pernod Ricard","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":"Anjali S"},{"SNO":41,"EmpStatus":"Active","EMP_CODE":11161,"EMP_NAME":"REENA CHAUHAN","PROJECT":"Pernod Ricard","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":"Anjali S"},{"SNO":42,"EmpStatus":"Active","EMP_CODE":11165,"EMP_NAME":"Lakkarajula Anjali Munaswamy","PROJECT":"Pernod Ricard","Utilization":0.5,"Status":"Ok","Role":"PM","Grade":6,"PM":"Archana T"},{"SNO":43,"EmpStatus":"Active","EMP_CODE":11165,"EMP_NAME":"Lakkarajula Anjali Munaswamy","PROJECT":"Unicharm","Utilization":0.5,"Status":"Ok","Role":"PM","Grade":6,"PM":null},{"SNO":44,"EmpStatus":"Active","EMP_CODE":11182,"EMP_NAME":"Prashant Rana","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":45,"EmpStatus":"Active","EMP_CODE":11187,"EMP_NAME":"Sagar Gupta","PROJECT":"Sterling Tools","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":46,"EmpStatus":"Active","EMP_CODE":11201,"EMP_NAME":"Vineet Chauhan","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":47,"EmpStatus":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Maruti Suzuki(MSIL)","Utilization":0.2,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":48,"EmpStatus":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"SKF India","Utilization":0.1,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":49,"EmpStatus":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"SBI Cards","Utilization":0.2,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":50,"EmpStatus":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Jindal Stainless","Utilization":0.2,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":"Kunal Mohan"},{"SNO":51,"EmpStatus":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Pernod Ricard","Utilization":0.1,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":"Anjali S"},{"SNO":52,"EmpStatus":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Sterling Tools","Utilization":0.1,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":53,"EmpStatus":"Active","EMP_CODE":11202,"EMP_NAME":"Shalini Singh","PROJECT":"Subros Ltd","Utilization":0.1,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":54,"EmpStatus":"Active","EMP_CODE":11205,"EMP_NAME":"Deepika Punjabi","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":55,"EmpStatus":"Active","EMP_CODE":11231,"EMP_NAME":"KUNAL MOHAN","PROJECT":"Jindal Stainless","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":6,"PM":"Kunal Mohan"},{"SNO":56,"EmpStatus":"Active","EMP_CODE":11232,"EMP_NAME":"Raveena Mehta","PROJECT":"Met Glass","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":57,"EmpStatus":"Active","EMP_CODE":11237,"EMP_NAME":"Shivani Chaudhary","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":58,"EmpStatus":"Active","EMP_CODE":11257,"EMP_NAME":"Ayushi Jha","PROJECT":"Pernod Ricard","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":"Anjali S"},{"SNO":59,"EmpStatus":"Active","EMP_CODE":11265,"EMP_NAME":"Sunita Verma","PROJECT":"Pernod Ricard","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":5,"PM":"Anjali S"},{"SNO":60,"EmpStatus":"Active","EMP_CODE":11271,"EMP_NAME":"Diksha Gothwal","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":61,"EmpStatus":"Active","EMP_CODE":11277,"EMP_NAME":"Anchit Kumar","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":62,"EmpStatus":"Active","EMP_CODE":11278,"EMP_NAME":"Payal Sharma","PROJECT":"Unicharm","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":63,"EmpStatus":"Active","EMP_CODE":11281,"EMP_NAME":"Poonam Tenginkai","PROJECT":"Unicharm","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":64,"EmpStatus":"Active","EMP_CODE":11284,"EMP_NAME":"NAMRATA PANDEY","PROJECT":"Pernod Ricard","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":"Anjali S"},{"SNO":65,"EmpStatus":"Active","EMP_CODE":11287,"EMP_NAME":"HIMANSHU NA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":66,"EmpStatus":"Active","EMP_CODE":11295,"EMP_NAME":"Kirti Nigam","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":67,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"SBI Cards","Utilization":0.1,"Status":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":68,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Jindal Stainless","Utilization":0.25,"Status":"Ok","Role":"PH","Grade":9,"PM":"Kunal Mohan"},{"SNO":69,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Pernod Ricard","Utilization":0.1,"Status":"Ok","Role":"PH","Grade":9,"PM":"Anjali S"},{"SNO":70,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Sterling Tools","Utilization":0.05,"Status":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":71,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Subros Ltd","Utilization":0.05,"Status":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":72,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Unicharm","Utilization":0.1,"Status":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":73,"EmpStatus":"Active","EMP_CODE":11315,"EMP_NAME":"Priya Sharma","PROJECT":"Subros Ltd","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":74,"EmpStatus":"Active","EMP_CODE":11335,"EMP_NAME":"Muskan Verma","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":75,"EmpStatus":"Active","EMP_CODE":11352,"EMP_NAME":"Saheba Siddiqui","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":76,"EmpStatus":"Active","EMP_CODE":11384,"EMP_NAME":"SHRADDHA JITENDRA JADHAV","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":77,"EmpStatus":"Active","EMP_CODE":11389,"EMP_NAME":"SONAKSHI JHAWAR","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":2,"PM":null},{"SNO":78,"EmpStatus":"Active","EMP_CODE":21842,"EMP_NAME":"Kunal Sehgal","PROJECT":"Subros Ltd","Utilization":0.5,"Status":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":79,"EmpStatus":"Active","EMP_CODE":22184,"EMP_NAME":"Mukesh Dubey","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":80,"EmpStatus":"Active","EMP_CODE":22639,"EMP_NAME":"Jagrati Raj","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":81,"EmpStatus":"Active","EMP_CODE":23404,"EMP_NAME":"Shivani Arun Kumar","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":82,"EmpStatus":"Active","EMP_CODE":23577,"EMP_NAME":"Neerja Singh","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":83,"EmpStatus":"Active","EMP_CODE":24511,"EMP_NAME":"Sharath Kumar D","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":84,"EmpStatus":"Active","EMP_CODE":24563,"EMP_NAME":"Subrat Nayak","PROJECT":"Jindal Stainless","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":5,"PM":"Kunal Mohan"},{"SNO":85,"EmpStatus":"Active","EMP_CODE":24855,"EMP_NAME":"Preeti Sharma","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":86,"EmpStatus":"Active","EMP_CODE":24887,"EMP_NAME":"Shashi Yadav","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":87,"EmpStatus":"Active","EMP_CODE":25004,"EMP_NAME":"Nida Ansari","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":4,"PM":null},{"SNO":88,"EmpStatus":"Active","EMP_CODE":25092,"EMP_NAME":"Shilpa H","PROJECT":"Jindal Stainless","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":"Kunal Mohan"},{"SNO":89,"EmpStatus":"Active","EMP_CODE":25118,"EMP_NAME":"Sonam Dalal","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":90,"EmpStatus":"Active","EMP_CODE":25253,"EMP_NAME":"Ravinder Kumar Yadav","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":6,"PM":null},{"SNO":91,"EmpStatus":"Active","EMP_CODE":25273,"EMP_NAME":"Saraswati Gupta","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":92,"EmpStatus":"Active","EMP_CODE":25285,"EMP_NAME":"Gauri Jaitly","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":5,"PM":null},{"SNO":93,"EmpStatus":"Active","EMP_CODE":25294,"EMP_NAME":"Neha Singh","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":94,"EmpStatus":"Active","EMP_CODE":25429,"EMP_NAME":"Ajay Pal Singh","PROJECT":"Suzuki R&D","Utilization":0.1,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":95,"EmpStatus":"Active","EMP_CODE":25444,"EMP_NAME":"Reema Balabantaray","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":96,"EmpStatus":"Active","EMP_CODE":25458,"EMP_NAME":"Abhilash Ranjan","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":7,"PM":null},{"SNO":97,"EmpStatus":"Active","EMP_CODE":25483,"EMP_NAME":"Kritika Chauhan","PROJECT":"SBI Cards","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":98,"EmpStatus":"Active","EMP_CODE":25504,"EMP_NAME":"Shikha Swami","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":null},{"SNO":99,"EmpStatus":"Active","EMP_CODE":25737,"EMP_NAME":"Natasha Mehta","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"PM","Grade":8,"PM":null},{"SNO":100,"EmpStatus":"Active","EMP_CODE":25763,"EMP_NAME":"Neha Chawda","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":101,"EmpStatus":"Active","EMP_CODE":25818,"EMP_NAME":"Seereddy Venkata Anuradha","PROJECT":"SKF India","Utilization":1.0,"Status":"Ok","Role":"Recruiter","Grade":4,"PM":null},{"SNO":102,"EmpStatus":"Active","EMP_CODE":25939,"EMP_NAME":"Pooja Sandesh Duwawale","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":103,"EmpStatus":"Active","EMP_CODE":25963,"EMP_NAME":"Sanjana Betageri","PROJECT":"Maruti Suzuki(MSIL)","Utilization":1.0,"Status":"Ok","Role":"Sourcer","Grade":3,"PM":null},{"SNO":104,"EmpStatus":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Maruti Suzuki(MSIL)","Utilization":0.4,"Status":"Ok","Role":"Data & Analytics","Grade":4,"PM":"Archana T"},{"SNO":105,"EmpStatus":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Pernod Ricard","Utilization":0.2,"Status":"Ok","Role":"Data & Analytics","Grade":4,"PM":"Anjali S"},{"SNO":106,"EmpStatus":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"SBI Cards","Utilization":0.1,"Status":"Ok","Role":"Data & Analytics","Grade":4,"PM":null},{"SNO":107,"EmpStatus":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Sterling Tools","Utilization":0.1,"Status":"Ok","Role":"Data & Analytics","Grade":4,"PM":null},{"SNO":108,"EmpStatus":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Jindal Stainless","Utilization":0.1,"Status":"Ok","Role":"Data & Analytics","Grade":4,"PM":"Kunal Mohan"},{"SNO":109,"EmpStatus":"Active","EMP_CODE":26267,"EMP_NAME":"Abhay Kumar Pandey","PROJECT":"Unicharm","Utilization":0.1,"Status":"Ok","Role":"Data & Analytics","Grade":4,"PM":null},{"SNO":110,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"SKF India","Utilization":0.2,"Status":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":111,"EmpStatus":"Active","EMP_CODE":11311,"EMP_NAME":"ARCHANA TRIKHA","PROJECT":"Maruti Suzuki(MSIL)","Utilization":0.15,"Status":"Ok","Role":"PH","Grade":9,"PM":null},{"SNO":112,"EmpStatus":"Active","EMP_CODE":25429,"EMP_NAME":"Ajay Pal Singh","PROJECT":"Jindal Stainless","Utilization":0.9,"Status":"Ok","Role":"Recruiter","Grade":3,"PM":"Kunal Mohan"}];
+
+// ======================================================
+// GLOBAL STATE
+// ======================================================
+let masterData      = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+let currentData     = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+let hcMasterData    = JSON.parse(JSON.stringify(HC_DATA));
+let hcCurrentData   = JSON.parse(JSON.stringify(HC_DATA));
+const charts        = {};
+const COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#3b82f6','#f97316','#06b6d4','#84cc16','#a855f7'];
+
+// ======================================================
+// INIT
+// ======================================================
+window.addEventListener('DOMContentLoaded', () => {
+    currentSection = 'recruitment';
+    setupFiltersForSection('recruitment');
+    updateFilterVisuals();
+    renderDashboard(currentData);
+    renderFinancialSection(null);
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    document.getElementById('recordCount').textContent = masterData.length + ' records loaded';
+    // activate recruitment nav without re-running switchSection (avoids double render)
+    document.getElementById('section-recruitment').classList.add('active');
+    document.getElementById('nav-recruitment').classList.add('active');
+});
+
+// ======================================================
+// ======================================================
+// SWITCH SECTION  — resets & re-populates filters per section
+// ======================================================
+let currentSection = 'recruitment';
+
+function switchSection(name) {
+    currentSection = name;
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('section-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+
+    // Reset all filter dropdowns when switching pages
+    ['projectFilter','pmFilter','recruiterFilter','sourceFilter'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+
+    // Show/hide filters based on section and repopulate with section-specific data
+    setupFiltersForSection(name);
+
+    // Render the appropriate section
+    if (name === 'hc') {
+        hcCurrentData = JSON.parse(JSON.stringify(hcMasterData));
+        renderHCAnalysis(hcCurrentData);
+    }
+    if (name === 'financial') {
+        renderFinancialSection(null);
+    }
+    if (name === 'recruitment') {
+        currentData = JSON.parse(JSON.stringify(masterData));
+        renderDashboard(currentData);
+    }
+
+    updateFilterVisuals();
+}
+
+// ======================================================
+// SETUP FILTERS PER SECTION  (show/hide + populate)
+// ======================================================
+function setupFiltersForSection(section) {
+    const grpPM        = document.getElementById('grp-pm');
+    const grpRecruiter = document.getElementById('grp-recruiter');
+    const grpSource    = document.getElementById('grp-source');
+
+    if (section === 'recruitment') {
+        // Show all 4 filters — populated from Base sheet
+        grpPM.style.display        = '';
+        grpRecruiter.style.display = '';
+        grpSource.style.display    = '';
+        populateRecruitmentFilters('init');
+
+    } else if (section === 'hc') {
+        // Only Project filter — populated from HC/Team sheet
+        grpPM.style.display        = 'none';
+        grpRecruiter.style.display = 'none';
+        grpSource.style.display    = 'none';
+        populateHCFilters();
+
+    } else if (section === 'financial') {
+        // Only Project filter — populated from Financial sheet
+        grpPM.style.display        = 'none';
+        grpRecruiter.style.display = 'none';
+        grpSource.style.display    = 'none';
+        populateFinancialFilters();
+    }
+}
+
+// ======================================================
+// RECRUITMENT FILTERS  (cascading: Project → PM → Recruiter → Source)
+// ======================================================
+function populateRecruitmentFilters(changedField) {
+    const project   = document.getElementById('projectFilter').value;
+    const pm        = document.getElementById('pmFilter').value;
+    const recruiter = document.getElementById('recruiterFilter').value;
+    const source    = document.getElementById('sourceFilter').value;
+
+    // Always derive from full masterData
+    const allProjects   = [...new Set(masterData.map(r => r.Project).filter(Boolean))].sort();
+    const pmPool        = project ? masterData.filter(r => r.Project === project) : masterData;
+    const allPMs        = [...new Set(pmPool.map(r => r.PM).filter(Boolean))].sort();
+    const recPool       = pmPool.filter(r => pm ? r.PM === pm : true);
+    const allRecruiters = [...new Set(recPool.map(r => r.Recruiter).filter(Boolean))].sort();
+    const srcPool       = recPool.filter(r => recruiter ? r.Recruiter === recruiter : true);
+    const allSources    = [...new Set(srcPool.map(r => r['Source of Hire']).filter(Boolean))].sort();
+
+    if (changedField === 'init') {
+        rebuildSelect('projectFilter',   allProjects,   project,   'All Projects');
+        rebuildSelect('pmFilter',        allPMs,        pm,        'All PMs');
+        rebuildSelect('recruiterFilter', allRecruiters, recruiter, 'All Recruiters');
+        rebuildSelect('sourceFilter',    allSources,    source,    'All Sources');
+    } else if (changedField === 'project') {
+        rebuildSelect('pmFilter',        allPMs,        '', 'All PMs');
+        rebuildSelect('recruiterFilter', allRecruiters, '', 'All Recruiters');
+        rebuildSelect('sourceFilter',    allSources,    '', 'All Sources');
+    } else if (changedField === 'pm') {
+        rebuildSelect('recruiterFilter', allRecruiters, '', 'All Recruiters');
+        rebuildSelect('sourceFilter',    allSources,    '', 'All Sources');
+    } else if (changedField === 'recruiter') {
+        rebuildSelect('sourceFilter', allSources, '', 'All Sources');
+    }
+}
+
+// ======================================================
+// HC FILTERS  (Project only — from HC/Team sheet)
+// ======================================================
+function populateHCFilters() {
+    const allProjects = [...new Set(hcMasterData.map(r => r.PROJECT).filter(Boolean))].sort();
+    rebuildSelect('projectFilter', allProjects, '', 'All Projects');
+}
+
+// ======================================================
+// FINANCIAL FILTERS  (Project only — from Financial sheet)
+// ======================================================
+function populateFinancialFilters() {
+    const allProjects = Object.keys(FINANCIAL_DATA_BY_PROJECT);
+    rebuildSelect('projectFilter', allProjects, '', 'All Projects');
+}
+
+// ======================================================
+// REBUILD SELECT HELPER
+// ======================================================
+function rebuildSelect(id, options, keepValue, placeholder) {
+    const sel = document.getElementById(id);
+    const val = (keepValue !== undefined) ? keepValue : sel.value;
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        if (opt === val) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+
+// ======================================================
+// ON FILTER CHANGE  — context-aware
+// ======================================================
+function onFilterChange(field) {
+    if (currentSection === 'recruitment') {
+        populateRecruitmentFilters(field);
+    }
+    // HC & Financial: project is the only filter, no cascading needed
+    applyFilters();
+    updateFilterVisuals();
+}
+
+// ======================================================
+// APPLY FILTERS  — context-aware per section
+// ======================================================
+function applyFilters() {
+    const project   = document.getElementById('projectFilter').value;
+    const pm        = document.getElementById('pmFilter').value;
+    const recruiter = document.getElementById('recruiterFilter').value;
+    const source    = document.getElementById('sourceFilter').value;
+
+    if (currentSection === 'recruitment') {
+        currentData = masterData.filter(row => {
+            if (project   && row.Project          !== project)   return false;
+            if (pm        && row.PM               !== pm)        return false;
+            if (recruiter && row.Recruiter        !== recruiter) return false;
+            if (source    && row['Source of Hire']!== source)    return false;
+            return true;
+        });
+        renderDashboard(currentData);
+        const total = currentData.length;
+        if (project || pm || recruiter || source)
+            showToast(`Showing ${total} record${total !== 1 ? 's' : ''} matching filters`, 'info', 2500);
+
+    } else if (currentSection === 'hc') {
+        hcCurrentData = hcMasterData.filter(row => {
+            if (project && row.PROJECT !== project) return false;
+            return true;
+        });
+        renderHCAnalysis(hcCurrentData);
+        if (project)
+            showToast(`HC: ${hcCurrentData.length} records for "${project}"`, 'info', 2500);
+
+    } else if (currentSection === 'financial') {
+        renderFinancialSection(project || null);
+        if (project)
+            showToast(`Financial: showing data for "${project}"`, 'info', 2500);
+    }
+}
+
+// ======================================================
+// RESET FILTERS  — context-aware
+// ======================================================
+function resetFilters() {
+    ['projectFilter','pmFilter','recruiterFilter','sourceFilter'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    setupFiltersForSection(currentSection);
+    updateFilterVisuals();
+
+    if (currentSection === 'recruitment') {
+        currentData = JSON.parse(JSON.stringify(masterData));
+        renderDashboard(currentData);
+    } else if (currentSection === 'hc') {
+        hcCurrentData = JSON.parse(JSON.stringify(hcMasterData));
+        renderHCAnalysis(hcCurrentData);
+    } else if (currentSection === 'financial') {
+        renderFinancialSection(null);
+    }
+
+    showToast('✅ Filters reset — showing all data', 'success', 2000);
+}
+
+// ======================================================
+// UPDATE FILTER VISUALS  (badge counter on reset btn)
+// ======================================================
+function updateFilterVisuals() {
+    const visibleIds = [];
+    if (currentSection === 'recruitment') {
+        visibleIds.push('projectFilter','pmFilter','recruiterFilter','sourceFilter');
+    } else {
+        visibleIds.push('projectFilter');
+    }
+
+    let activeCount = 0;
+    visibleIds.forEach(id => {
+        const val = document.getElementById(id).value;
+        const field = id.replace('Filter','');
+        const grp   = document.getElementById('grp-' + field) ||
+                      document.getElementById('grp-' + (id === 'recruiterFilter' ? 'recruiter' :
+                                                        id === 'sourceFilter'    ? 'source'    :
+                                                        id === 'pmFilter'        ? 'pm'        : 'project'));
+        if (grp) {
+            if (val) { grp.classList.add('active'); activeCount++; }
+            else     { grp.classList.remove('active'); }
+        }
+    });
+
+    const resetBtn = document.getElementById('resetBtn');
+    let badge = resetBtn.querySelector('.filter-badge');
+    if (activeCount > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'filter-badge'; resetBtn.appendChild(badge); }
+        badge.textContent = activeCount;
+    } else if (badge) badge.remove();
+}
+
+
+// ======================================================
+// CALCULATE METRICS
+// ======================================================
+function calcMetrics(data) {
+    const total     = data.length;
+    const joined    = data.filter(r => r.Status === 'Joined').length;
+    const cancelled = data.filter(r => r.Status === 'Cancelled').length;
+    const hold      = data.filter(r => r.Status === 'Hold').length;
+    const offered   = data.filter(r => {
+        const s = (r.Status || '').toLowerCase();
+        const st= (r.Stage  || '').toLowerCase();
+        return s === 'offered' || st.includes('offer') || st === 'loi' || st === 'loi issued';
+    }).length;
+    const wip       = Math.max(0, total - joined - cancelled - hold);
+    const selection = data.filter(r => r['Selection Date'] && r['Selection Date'] !== null && r['Selection Date'] !== '' && r['Selection Date'] !== 'NaT').length;
+    const ageRecs   = data.filter(r => r.Ageing != null && !isNaN(r.Ageing) && +r.Ageing > 0);
+    const ageing    = ageRecs.length;
+    const avgAging  = ageing > 0 ? (ageRecs.reduce((s,r) => s + +r.Ageing, 0) / ageing) : 0;
+    const ageingPct = total > 0 ? (ageing / total * 100) : 0;
+    const successRate = total > 0 ? (joined / total * 100) : 0;
+    const ttoVals = data.filter(r => r.TTO != null && !isNaN(r.TTO)).map(r => +r.TTO);
+    const ttfVals = data.filter(r => r.TTF != null && !isNaN(r.TTF)).map(r => +r.TTF);
+    const atto = ttoVals.length ? (ttoVals.reduce((a,b) => a+b, 0) / ttoVals.length) : null;
+    const attf = ttfVals.length ? (ttfVals.reduce((a,b) => a+b, 0) / ttfVals.length) : null;
+    return { total, joined, cancelled, hold, offered, wip, selection, ageing, avgAging, ageingPct, successRate, atto, attf };
+}
+
+function updateKPIs(m) {
+    document.getElementById('kpi-total').textContent       = m.total.toLocaleString();
+    document.getElementById('kpi-joined').textContent      = m.joined.toLocaleString();
+    document.getElementById('kpi-wip').textContent         = m.wip.toLocaleString();
+    document.getElementById('kpi-offered').textContent     = m.offered.toLocaleString();
+    document.getElementById('kpi-selection').textContent   = m.selection.toLocaleString();
+    document.getElementById('kpi-ageing').textContent      = m.ageing.toLocaleString();
+    document.getElementById('kpi-avgAgeing').textContent   = m.avgAging.toFixed(1);
+    document.getElementById('kpi-hold').textContent        = m.hold.toLocaleString();
+    document.getElementById('kpi-cancelled').textContent   = m.cancelled.toLocaleString();
+    document.getElementById('kpi-ageingPct').textContent   = m.ageingPct.toFixed(1) + '%';
+    document.getElementById('kpi-successRate').textContent = m.successRate.toFixed(1) + '%';
+    document.getElementById('kpi-atto').textContent        = m.atto != null ? m.atto.toFixed(1) : '—';
+    document.getElementById('kpi-attf').textContent        = m.attf != null ? m.attf.toFixed(1) : '—';
+}
+
+function renderDashboard(data) {
+    const metrics = calcMetrics(data);
+    updateKPIs(metrics);
+    updateAllCharts(data);
+}
+
+// ======================================================
+// CHART HELPERS
+// ======================================================
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function groupByMonth(data, dateField) {
+    const counts = {};
+    data.forEach(r => {
+        const raw = r[dateField];
+        if (!raw || raw === 'null' || raw === 'NaT') return;
+        const d = new Date(raw);
+        if (isNaN(d)) return;
+        const key = d.toLocaleDateString('en-GB', { month:'short', year:'2-digit' }).replace(' ', "'");
+        counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+        .map(([k, v]) => {
+            const parts = k.split("'");
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return { key: k, count: v, sort: +('20' + parts[1]) * 12 + months.indexOf(parts[0]) };
+        })
+        .sort((a, b) => a.sort - b.sort)
+        .reduce((acc, {key, count}) => { acc.labels.push(key); acc.values.push(count); return acc; }, {labels:[], values:[]});
+}
+
+function barChart(canvasId, label, data, color) {
+    destroyChart(canvasId);
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type:'bar',
+        data: {
+            labels: data.labels,
+            datasets:[{ label, data: data.values, backgroundColor: color + 'dd', borderColor: color, borderWidth:2, borderRadius:10, hoverBackgroundColor: color + 'ff' }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{display:false},
+                datalabels:{ color:'#1e293b', font:{weight:'800',size:11}, anchor:'end', align:'top', formatter: v => v > 0 ? v : '', backgroundColor:'rgba(255,255,255,0.85)', borderRadius:4, padding:{top:2,bottom:2,left:5,right:5} }
+            },
+            scales:{
+                y:{ beginAtZero:true, ticks:{precision:0,font:{weight:'600'}}, grid:{color:'#e2e8f0'} },
+                x:{ grid:{display:false}, ticks:{font:{weight:'600'}} }
+            }
+        }
+    });
+}
+
+function doughnutChart(canvasId, labels, values, colors) {
+    destroyChart(canvasId);
+    if (!values.some(v => v > 0)) { renderEmptyChart(canvasId); return; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type:'doughnut',
+        data:{ labels, datasets:[{ data:values, backgroundColor:colors||COLORS, borderWidth:4, borderColor:'white', hoverBorderWidth:6 }] },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{ position:'right', labels:{font:{size:11,weight:'600'},padding:12,usePointStyle:true,pointStyle:'circle'} },
+                datalabels:{ color:'white', font:{weight:'800',size:11}, formatter:(v,ctx) => { const t=ctx.dataset.data.reduce((a,b)=>a+b,0); return t>0?Math.round(v/t*100)+'%':''; }, textShadowColor:'rgba(0,0,0,0.5)', textShadowBlur:4 }
+            },
+            cutout:'60%'
+        }
+    });
+}
+
+function horizontalBarChart(canvasId, labels, values, colors) {
+    destroyChart(canvasId);
+    if (!values.some(v => v > 0)) { renderEmptyChart(canvasId); return; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[canvasId] = new Chart(ctx, {
+        type:'bar',
+        data:{ labels, datasets:[{ data:values, backgroundColor:colors||COLORS.slice(0,labels.length), borderRadius:8, borderWidth:1, borderColor:'rgba(255,255,255,0.5)' }] },
+        options:{
+            indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{display:false},
+                datalabels:{ color:'#1e293b', font:{weight:'800',size:11}, anchor:'end', align:'right', formatter: v => v > 0 ? v : '', backgroundColor:'rgba(255,255,255,0.9)', borderRadius:4, padding:{top:2,bottom:2,left:5,right:5} }
+            },
+            scales:{
+                x:{ beginAtZero:true, ticks:{precision:0,font:{weight:'600'}}, grid:{color:'#e2e8f0'} },
+                y:{ grid:{display:false}, ticks:{font:{weight:'600'}} }
+            }
+        }
+    });
+}
+
+function renderEmptyChart(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    destroyChart(canvasId);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data to display', canvas.width/2, canvas.height/2);
+}
+
+function updateAllCharts(data) {
+    const joinersData = groupByMonth(data.filter(r => r.Status === 'Joined'), 'Joining Date');
+    if (joinersData.labels.length) barChart('chartJoiners','Joiners', joinersData, '#3b82f6');
+    else renderEmptyChart('chartJoiners');
+    const offersData = groupByMonth(data.filter(r => r['LOI Date']), 'LOI Date');
+    if (offersData.labels.length) barChart('chartOffers','Offers', offersData, '#10b981');
+    else renderEmptyChart('chartOffers');
+    const reqsData = groupByMonth(data, 'Requisition Date');
+    if (reqsData.labels.length) barChart('chartReqs','Requirements', reqsData, '#f59e0b');
+    else renderEmptyChart('chartReqs');
+    const sourceCount = {};
+    data.forEach(r => { const s = r['Source of Hire']; if (s) sourceCount[s] = (sourceCount[s]||0)+1; });
+    doughnutChart('chartSource', Object.keys(sourceCount), Object.values(sourceCount));
+    const brackets = {'0-30 Days':0,'31-60 Days':0,'61-90 Days':0,'91-180 Days':0,'181-250 Days':0,'>250 Days':0};
+    data.forEach(r => {
+        const ag = r['Ageing Bracket']; const age = r.Ageing;
+        if (ag && brackets.hasOwnProperty(ag)) { brackets[ag]++; return; }
+        if (age == null || isNaN(age)) return;
+        const a = +age;
+        if (a<=30) brackets['0-30 Days']++;
+        else if (a<=60) brackets['31-60 Days']++;
+        else if (a<=90) brackets['61-90 Days']++;
+        else if (a<=180) brackets['91-180 Days']++;
+        else if (a<=250) brackets['181-250 Days']++;
+        else brackets['>250 Days']++;
+    });
+    horizontalBarChart('chartAgeing', Object.keys(brackets), Object.values(brackets), ['#bbf7d0','#fed7aa','#fde68a','#fca5a5','#f87171','#dc2626']);
+    const genderCount = {};
+    data.filter(r => r.Status === 'Joined').forEach(r => { const g = r.Gender; if (g) genderCount[g] = (genderCount[g]||0)+1; });
+    doughnutChart('chartGender', Object.keys(genderCount), Object.values(genderCount), ['#6366f1','#ec4899','#14b8a6']);
+}
+
+// ======================================================
+// FINANCIAL SECTION
+// ======================================================
+// Per-project financial data (Project filter drives this)
+const FINANCIAL_DATA_BY_PROJECT = {
+    'MSIL': {
+        target:      { Apr:28.857, May:28.477, Jun:22.0, Jul:30.0, Aug:56.0, Sep:40.0, Oct:45.0, Nov:55.0, Dec:45.0, Jan:55.0, Feb:60.0, Mar:60.0 },
+        actual:      { Apr:32.697, May:35.656, Jun:22.661, Jul:50.144, Aug:39.022, Sep:35.87, Oct:37.2, Nov:39.0, Dec:40.7, Jan:29.0, Feb:11.0, Mar:5.12 },
+        achievement: { Apr:113.31, May:125.21, Jun:103.01, Jul:167.15, Aug:69.68, Sep:89.67, Oct:82.67, Nov:70.91, Dec:90.44, Jan:52.73, Feb:18.33, Mar:8.53 },
+        cm_percent:  { Apr:0.40, May:0.25, Jun:-0.52, Jul:-0.57, Aug:0.10, Sep:0.11, Oct:0.11, Nov:0.11, Dec:0.11, Jan:0.11, Feb:0.11, Mar:0.11 }
+    }
+};
+// Backward-compat alias used by older code paths
+const FINANCIAL_DATA = FINANCIAL_DATA_BY_PROJECT['MSIL'];
+
+function renderFinancialSection(selectedProject) {
+    // Pick dataset: if a project is selected and exists, use it; otherwise use first
+    const projectKey = (selectedProject && FINANCIAL_DATA_BY_PROJECT[selectedProject])
+                        ? selectedProject
+                        : Object.keys(FINANCIAL_DATA_BY_PROJECT)[0];
+    const data = FINANCIAL_DATA_BY_PROJECT[projectKey];
+    const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+    let totalTarget=0, totalActual=0, cmSum=0, cmCount=0;
+    months.forEach(m => {
+        totalTarget += data.target[m]||0;
+        totalActual += data.actual[m]||0;
+        if (data.cm_percent[m] !== undefined) { cmSum += data.cm_percent[m]; cmCount++; }
+    });
+    const achPct = totalTarget>0 ? (totalActual/totalTarget*100).toFixed(1) : 0;
+    const avgCM  = cmCount>0 ? ((cmSum/cmCount)*100).toFixed(1) : 0;
+    document.getElementById('fin-target').textContent = totalTarget.toFixed(2);
+    document.getElementById('fin-actual').textContent = totalActual.toFixed(2);
+    document.getElementById('fin-achpct').textContent = achPct + '%';
+    document.getElementById('fin-cm').textContent     = avgCM + '%';
+
+    const q1A = (data.actual.Apr||0)+(data.actual.May||0)+(data.actual.Jun||0);
+    const q2A = (data.actual.Jul||0)+(data.actual.Aug||0)+(data.actual.Sep||0);
+    const q3A = (data.actual.Oct||0)+(data.actual.Nov||0)+(data.actual.Dec||0);
+    const q4A = (data.actual.Jan||0)+(data.actual.Feb||0)+(data.actual.Mar||0);
+    document.getElementById('fin-q1-actual').textContent = q1A.toFixed(2);
+    document.getElementById('fin-q2-actual').textContent = q2A.toFixed(2);
+    document.getElementById('fin-q3-actual').textContent = q3A.toFixed(2);
+    document.getElementById('fin-q4-actual').textContent = q4A.toFixed(2);
+
+    // Chart 1: Target vs Actual
+    destroyChart('chartTarget');
+    charts['chartTarget'] = new Chart(document.getElementById('chartTarget').getContext('2d'), {
+        type:'bar',
+        data:{ labels:months, datasets:[
+            { label:'Target', data:months.map(m=>data.target[m]||0), backgroundColor:'rgba(59,130,246,0.85)', borderColor:'#3b82f6', borderWidth:2, borderRadius:10 },
+            { label:'Actual', data:months.map(m=>data.actual[m]||0), backgroundColor:'rgba(16,185,129,0.85)', borderColor:'#10b981', borderWidth:2, borderRadius:10 }
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{position:'bottom',labels:{font:{size:12,weight:'600'},padding:16,usePointStyle:true}},
+                datalabels:{ anchor:'end',align:'top',color:'#1e293b',font:{weight:'bold',size:9},formatter:v=>v>0?v.toFixed(1):'',backgroundColor:'rgba(255,255,255,0.85)',borderRadius:4,padding:{top:2,bottom:2,left:4,right:4} } },
+            scales:{ y:{beginAtZero:true,grid:{color:'#e2e8f0'},ticks:{callback:v=>v.toFixed(0),font:{weight:'600'}}}, x:{grid:{display:false},ticks:{font:{weight:'600'}}} }
+        }, plugins:[ChartDataLabels]
+    });
+
+    // Chart 2: CM% Trend
+    destroyChart('chartCM');
+    charts['chartCM'] = new Chart(document.getElementById('chartCM').getContext('2d'), {
+        type:'line',
+        data:{ labels:months, datasets:[{ label:'CM%', data:months.map(m=>+(data.cm_percent[m]*100).toFixed(2)||0),
+            borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.15)', tension:0.4, fill:true, borderWidth:3, pointRadius:6, pointHoverRadius:9, pointBackgroundColor:'#f59e0b', pointBorderColor:'white', pointBorderWidth:2 }] },
+        options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false},
+                datalabels:{ anchor:'end',align:'top',color:'#1e293b',font:{weight:'bold',size:10},formatter:v=>v!==0?v.toFixed(1)+'%':'',backgroundColor:'rgba(255,255,255,0.9)',borderRadius:4,padding:{top:2,bottom:2,left:4,right:4} } },
+            scales:{ y:{grid:{color:'#e2e8f0'},ticks:{callback:v=>v+'%',font:{weight:'600'}}}, x:{grid:{display:false},ticks:{font:{weight:'600'}}} }
+        }, plugins:[ChartDataLabels]
+    });
+
+    // Chart 3: Achievement % Trend
+    destroyChart('chartAch');
+    charts['chartAch'] = new Chart(document.getElementById('chartAch').getContext('2d'), {
+        type:'line',
+        data:{ labels:months, datasets:[{ label:'Achievement %', data:months.map(m=>data.achievement[m]||0),
+            borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.15)', tension:0.4, fill:true, borderWidth:3, pointRadius:6, pointHoverRadius:9, pointBackgroundColor:'#8b5cf6', pointBorderColor:'white', pointBorderWidth:2 }] },
+        options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false},
+                datalabels:{ anchor:'end',align:'top',color:'#1e293b',font:{weight:'bold',size:10},formatter:v=>v>0?v.toFixed(1)+'%':'',backgroundColor:'rgba(255,255,255,0.9)',borderRadius:4,padding:{top:2,bottom:2,left:4,right:4} } },
+            scales:{ y:{beginAtZero:true,grid:{color:'#e2e8f0'},ticks:{callback:v=>v+'%',font:{weight:'600'}}}, x:{grid:{display:false},ticks:{font:{weight:'600'}}} }
+        }, plugins:[ChartDataLabels]
+    });
+
+    // Chart 4: Quarterly Comparison
+    destroyChart('chartQuarterly');
+    const q1T = (data.target.Apr||0)+(data.target.May||0)+(data.target.Jun||0);
+    const q2T = (data.target.Jul||0)+(data.target.Aug||0)+(data.target.Sep||0);
+    const q3T = (data.target.Oct||0)+(data.target.Nov||0)+(data.target.Dec||0);
+    const q4T = (data.target.Jan||0)+(data.target.Feb||0)+(data.target.Mar||0);
+    charts['chartQuarterly'] = new Chart(document.getElementById('chartQuarterly').getContext('2d'), {
+        type:'bar',
+        data:{ labels:['Q1 (Apr-Jun)','Q2 (Jul-Sep)','Q3 (Oct-Dec)','Q4 (Jan-Mar)'], datasets:[
+            { label:'Target', data:[q1T,q2T,q3T,q4T], backgroundColor:'rgba(59,130,246,0.85)', borderColor:'#3b82f6', borderWidth:2, borderRadius:10 },
+            { label:'Achievement', data:[q1A,q2A,q3A,q4A], backgroundColor:'rgba(16,185,129,0.85)', borderColor:'#10b981', borderWidth:2, borderRadius:10 }
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{position:'bottom',labels:{font:{size:12,weight:'600'},padding:16,usePointStyle:true}},
+                datalabels:{ anchor:'end',align:'top',color:'#1e293b',font:{weight:'bold',size:11},formatter:v=>v>0?v.toFixed(1):'',backgroundColor:'rgba(255,255,255,0.9)',borderRadius:4,padding:{top:2,bottom:2,left:5,right:5} } },
+            scales:{ y:{beginAtZero:true,grid:{color:'#e2e8f0'},ticks:{callback:v=>v.toFixed(0),font:{weight:'600'}}}, x:{grid:{display:false},ticks:{font:{weight:'600'}}} }
+        }, plugins:[ChartDataLabels]
+    });
+
+    // Chart 5: Quarterly CM%
+    destroyChart('chartQuarterlyCM');
+    const q1CM = ((data.cm_percent.Apr||0)+(data.cm_percent.May||0)+(data.cm_percent.Jun||0))/3*100;
+    const q2CM = ((data.cm_percent.Jul||0)+(data.cm_percent.Aug||0)+(data.cm_percent.Sep||0))/3*100;
+    const q3CM = ((data.cm_percent.Oct||0)+(data.cm_percent.Nov||0)+(data.cm_percent.Dec||0))/3*100;
+    const q4CM = ((data.cm_percent.Jan||0)+(data.cm_percent.Feb||0)+(data.cm_percent.Mar||0))/3*100;
+    charts['chartQuarterlyCM'] = new Chart(document.getElementById('chartQuarterlyCM').getContext('2d'), {
+        type:'bar',
+        data:{ labels:['Q1 (Apr-Jun)','Q2 (Jul-Sep)','Q3 (Oct-Dec)','Q4 (Jan-Mar)'],
+            datasets:[{ label:'CM%', data:[q1CM,q2CM,q3CM,q4CM],
+                backgroundColor:['rgba(16,185,129,0.85)','rgba(245,158,11,0.85)','rgba(99,102,241,0.85)','rgba(236,72,153,0.85)'],
+                borderColor:['#10b981','#f59e0b','#6366f1','#ec4899'], borderWidth:2, borderRadius:10 }] },
+        options:{ responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{display:false},
+                datalabels:{ anchor:'end',align:'top',color:'#1e293b',font:{weight:'bold',size:12},formatter:v=>v.toFixed(1)+'%',backgroundColor:'rgba(255,255,255,0.9)',borderRadius:4,padding:{top:2,bottom:2,left:6,right:6} } },
+            scales:{ y:{grid:{color:'#e2e8f0'},ticks:{callback:v=>v.toFixed(0)+'%',font:{weight:'600'}}}, x:{grid:{display:false},ticks:{font:{weight:'600'}}} }
+        }, plugins:[ChartDataLabels]
+    });
+}
+
+// ======================================================
+// HC ANALYSIS
+// ======================================================
+function renderHCAnalysis(data) {
+    const total      = data.length;
+    const active     = data.filter(r => r.EmpStatus === 'Active').length;
+    const projects   = [...new Set(data.map(r => r.PROJECT).filter(Boolean))].length;
+    const utilSum    = data.reduce((s, r) => s + (r.Utilization||0), 0);
+    const avgUtil    = total > 0 ? (utilSum / total * 100) : 0;
+    const recruiters = data.filter(r => r.Role === 'Recruiter').length;
+    const sourcers   = data.filter(r => r.Role === 'Sourcer').length;
+    const pms        = data.filter(r => r.Role === 'PM').length;
+
+    document.getElementById('hc-total').textContent     = total.toLocaleString();
+    document.getElementById('hc-active').textContent    = active.toLocaleString();
+    document.getElementById('hc-projects').textContent  = projects.toLocaleString();
+    document.getElementById('hc-util').textContent      = avgUtil.toFixed(1) + '%';
+    document.getElementById('hc-recruiters').textContent= recruiters.toLocaleString();
+    document.getElementById('hc-sourcers').textContent  = sourcers.toLocaleString();
+    document.getElementById('hc-pms').textContent       = pms.toLocaleString();
+    document.getElementById('hc-util-sum').textContent  = utilSum.toFixed(1);
+
+    // Grade-wise Count
+    const gradeCounts = {};
+    data.forEach(r => { const g = r.Grade; if (g!=null) gradeCounts['Grade '+g] = (gradeCounts['Grade '+g]||0)+1; });
+    const gradeLabels = Object.keys(gradeCounts).sort((a,b) => parseInt(a.split(' ')[1])-parseInt(b.split(' ')[1]));
+    doughnutChart('chartGrade', gradeLabels, gradeLabels.map(g=>gradeCounts[g]));
+
+    // Role-wise Count
+    const roleCounts = {};
+    data.forEach(r => { if (r.Role) roleCounts[r.Role] = (roleCounts[r.Role]||0)+1; });
+    doughnutChart('chartRole', Object.keys(roleCounts), Object.values(roleCounts));
+
+    // Utilization Sum by Grade
+    const gradeUtil = {};
+    data.forEach(r => { const g = 'Grade '+(r.Grade||'?'); gradeUtil[g] = (gradeUtil[g]||0)+(r.Utilization||0); });
+    const gULabels = Object.keys(gradeUtil).sort((a,b) => parseInt(a.split(' ')[1])-parseInt(b.split(' ')[1]));
+    barChart('chartUtilGrade','Utilization Sum', {labels:gULabels, values:gULabels.map(g=>gradeUtil[g])}, '#8b5cf6');
+
+    // Utilization Sum by Role
+    const roleUtil = {};
+    data.forEach(r => { if (r.Role) roleUtil[r.Role] = (roleUtil[r.Role]||0)+(r.Utilization||0); });
+    barChart('chartUtilRole','Utilization Sum', {labels:Object.keys(roleUtil), values:Object.values(roleUtil)}, '#14b8a6');
+
+    // Project-wise Headcount
+    const projectCounts = {};
+    data.forEach(r => { if (r.PROJECT) projectCounts[r.PROJECT] = (projectCounts[r.PROJECT]||0)+1; });
+    const projKeys = Object.keys(projectCounts).sort((a,b)=>projectCounts[b]-projectCounts[a]);
+    horizontalBarChart('chartHCProject', projKeys, projKeys.map(p=>projectCounts[p]));
+
+    // PM-wise Headcount
+    const pmCounts = {};
+    data.forEach(r => { const pm = r.PM||'Unassigned'; pmCounts[pm] = (pmCounts[pm]||0)+1; });
+    horizontalBarChart('chartPM', Object.keys(pmCounts), Object.values(pmCounts));
+
+    // Project-wise Utilization Sum
+    const projUtil = {};
+    data.forEach(r => { if (r.PROJECT) projUtil[r.PROJECT] = (projUtil[r.PROJECT]||0)+(r.Utilization||0); });
+    const puKeys = Object.keys(projUtil).sort((a,b)=>projUtil[b]-projUtil[a]);
+    horizontalBarChart('chartProjUtil', puKeys, puKeys.map(p=>projUtil[p]));
+
+    // Grade Distribution by Project (stacked bar)
+    destroyChart('chartGradeProject');
+    const projectList = [...new Set(data.map(r=>r.PROJECT).filter(Boolean))];
+    const gradeList   = [...new Set(data.map(r=>r.Grade).filter(g=>g!=null))].sort((a,b)=>a-b);
+    const datasets = gradeList.map((g, i) => {
+        const vals = projectList.map(p => data.filter(r=>r.PROJECT===p && r.Grade===g).length);
+        return { label:'Grade '+g, data:vals, backgroundColor:COLORS[i%COLORS.length]+'cc', borderColor:COLORS[i%COLORS.length], borderWidth:1, borderRadius:4 };
+    });
+    const ctxGP = document.getElementById('chartGradeProject');
+    if (ctxGP) {
+        charts['chartGradeProject'] = new Chart(ctxGP.getContext('2d'), {
+            type:'bar',
+            data:{ labels:projectList, datasets },
+            options:{
+                responsive:true, maintainAspectRatio:false,
+                plugins:{ legend:{position:'bottom',labels:{font:{size:10,weight:'600'},padding:8,usePointStyle:true}}, datalabels:{display:false} },
+                scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:9,weight:'600'}}}, y:{stacked:true,grid:{color:'#e2e8f0'},ticks:{font:{weight:'600'}}} }
+            }
+        });
+    }
+
+    // Employment Status
+    const empStatus = {};
+    data.forEach(r => { if (r.EmpStatus) empStatus[r.EmpStatus]=(empStatus[r.EmpStatus]||0)+1; });
+    doughnutChart('chartEmpStatus', Object.keys(empStatus), Object.values(empStatus), ['#10b981','#ef4444','#f59e0b']);
+
+    // Utilization Distribution
+    const utilBrackets = {'100%':0,'75-99%':0,'50-74%':0,'<50%':0};
+    data.forEach(r => {
+        const u = (r.Utilization||0)*100;
+        if (u>=100) utilBrackets['100%']++;
+        else if (u>=75) utilBrackets['75-99%']++;
+        else if (u>=50) utilBrackets['50-74%']++;
+        else utilBrackets['<50%']++;
+    });
+    doughnutChart('chartUtilDist', Object.keys(utilBrackets), Object.values(utilBrackets), ['#6366f1','#10b981','#f59e0b','#ef4444']);
+}
+
+// ======================================================
+// FILE UPLOAD
+// ======================================================
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    await processFile(file);
+    event.target.value = '';
+}
+async function processFile(file) {
+    try {
+        showToast('📂 Reading ' + file.name + '...', 'info', 3000);
+        const data = await file.arrayBuffer();
+        let jsonData = [];
+        if (file.name.endsWith('.csv')) {
+            const text = new TextDecoder().decode(data);
+            const lines = text.split('\n').filter(l => l.trim());
+            const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+            jsonData = lines.slice(1).map(line => {
+                const vals = line.split(',').map(v => v.replace(/"/g,'').trim());
+                const obj = {}; headers.forEach((h, i) => { obj[h] = vals[i] || null; }); return obj;
+            });
+        } else {
+            const wb = XLSX.read(data, {type:'array',cellDates:true,dateNF:'yyyy-mm-dd'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            jsonData = XLSX.utils.sheet_to_json(ws, {defval:null,raw:false});
+        }
+        const cleaned = jsonData.map(row => {
+            const clean = {};
+            Object.keys(row).forEach(key => {
+                const k = key.trim().replace(/\s+/g,' ');
+                let v = row[key];
+                if (v instanceof Date) v = v.toISOString().split('T')[0];
+                if (typeof v === 'string') { v = v.replace(/\xa0/g,'').trim(); if (!v||v==='NaT'||v==='nan'||v==='None'||v==='null') v=null; }
+                if (v!==null && !isNaN(v) && v!=='') v = typeof v==='string'?(v.includes('.')?parseFloat(v):parseInt(v,10)):v;
+                clean[k] = v;
+            });
+            return clean;
+        }).filter(r => Object.values(r).some(v => v!=null));
+        if (cleaned.length===0) { showToast('❌ No data found in file','error'); return; }
+        masterData = cleaned; currentData = JSON.parse(JSON.stringify(masterData));
+        ['projectFilter','pmFilter','recruiterFilter','sourceFilter'].forEach(id=>document.getElementById(id).value='');
+        setupFiltersForSection(currentSection); updateFilterVisuals();
+        renderDashboard(currentData);
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        document.getElementById('recordCount').textContent = masterData.length + ' records loaded';
+        showToast('✅ Loaded ' + cleaned.length + ' records from ' + file.name, 'success', 4000);
+    } catch(err) { console.error(err); showToast('❌ Error: '+err.message,'error',5000); }
+}
+
+// ======================================================
+// DRILL-THROUGH MODAL
+// ======================================================
+function showDrillthrough(type) {
+    let title='', rows=[];
+    const data = currentData;
+    const m = calcMetrics(data);
+    const groupBy = (field, filterFn) => {
+        const d = filterFn ? data.filter(filterFn) : data;
+        const counts = {}; d.forEach(r => { const v = r[field]||'Unknown'; counts[v]=(counts[v]||0)+1; });
+        return Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    };
+    switch(type) {
+        case 'total':       title=`Total Requirements (${m.total})`; rows=groupBy('Status'); break;
+        case 'joined':      title=`Joined (${m.joined})`; rows=groupBy('Recruiter',r=>r.Status==='Joined'); break;
+        case 'wip':         title=`WIP (${m.wip})`; rows=groupBy('Stage',r=>r.Status!=='Joined'&&r.Status!=='Cancelled'&&r.Status!=='Hold'); break;
+        case 'offered':     title=`Offered (${m.offered})`; rows=groupBy('Source of Hire',r=>r.Status==='Offered'||(r.Stage||'').toLowerCase().includes('offer')); break;
+        case 'selection':   title=`Selections (${m.selection})`; rows=groupBy('Recruiter',r=>r['Selection Date']!=null); break;
+        case 'ageing':      title=`Ageing Requirements (${m.ageing})`; rows=groupBy('Ageing Bracket',r=>r.Ageing!=null&&!isNaN(r.Ageing)&&+r.Ageing>0); break;
+        case 'hold':        title=`On Hold (${m.hold})`; rows=groupBy('Vertical',r=>r.Status==='Hold'); break;
+        case 'cancelled':   title=`Cancelled (${m.cancelled})`; rows=groupBy('PM',r=>r.Status==='Cancelled'); break;
+        case 'ageingPct':   title=`Ageing % (${m.ageingPct.toFixed(1)}%)`; rows=groupBy('Ageing Bracket',r=>r.Ageing!=null&&+r.Ageing>0); break;
+        case 'successRate': title=`Success Rate (${m.successRate.toFixed(1)}%)`; rows=groupBy('Recruiter',r=>r.Status==='Joined'); break;
+    }
+    document.getElementById('modalTitle').textContent = title;
+    let html = rows.length===0 ? '<p style="color:#94a3b8;padding:1.5rem;">No data for current filters.</p>' :
+        '<table class="dt-table"><thead><tr><th>Category</th><th>Count</th></tr></thead><tbody>' +
+        rows.map(([k,v])=>`<tr><td>${k}</td><td><b>${v}</b></td></tr>`).join('') + '</tbody></table>';
+    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('modal').classList.add('active');
+}
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+document.getElementById('modal').addEventListener('click', e => { if (e.target===document.getElementById('modal')) closeModal(); });
+
+// ======================================================
+// TOAST
+// ======================================================
+function showToast(message, type='info', duration=3000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    const colors = { success:'#10b981', error:'#ef4444', info:'#6366f1', warning:'#f59e0b' };
+    toast.style.background = colors[type]||colors.info;
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>toast.classList.add('show')));
+    setTimeout(()=>{ toast.classList.remove('show'); setTimeout(()=>toast.remove(),500); }, duration);
+}
+
+// Mobile sidebar
+document.addEventListener('click', e => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !e.target.closest('.mobile-fab')) sidebar.classList.remove('open');
+});
+</script>
+</body>
+</html>
